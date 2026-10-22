@@ -24,6 +24,10 @@ class Oled:
             for i in range(x, min(128, x + w)):
                 for j in range(y, min(64, y + h)): self.img.putpixel((i, j), 1 - self.img.getpixel((i, j)))
         elif cmd == "gClear": self.d.rectangle([0, 0, 127, 63], fill=0)
+        elif cmd == "gWaveform":          # [screen, y0..y127]: a polyline across the width
+            ys = a[1:]
+            for i in range(len(ys) - 1):
+                self.d.line([i, ys[i], i + 1, ys[i + 1]], fill=1)
     def save(self, path, scale=4):
         rgb = Image.new("RGB", (128, 64))
         px = self.img.load(); out = rgb.load()
@@ -36,6 +40,8 @@ def render(log, outdir, prefix=""):
     for l in log.splitlines():
         m = re.match(r"screenLine(\d): (?:list |symbol )?(.*)", l)
         if m: o.line(int(m.group(1)), m.group(2).replace("\\ ", " ")); continue
+        m = re.match(r"oscOut: sendtyped /oled/(\w+) \w+ ?(.*)", l)
+        if m: o.g(m.group(1), m.group(2).split()); continue
         m = re.match(r"oscOut: /oled/(\w+) ?(.*)", l)
         if m: o.g(m.group(1), m.group(2).split()); continue
         m = re.match(r"SNAP: (?:symbol )?(\S+)", l)

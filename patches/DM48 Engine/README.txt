@@ -14,11 +14,16 @@ KEYS  (the Organelle keyboard is a control surface; play the DM48X)
               A# loop undo   B loop stop/start
  High octave: C freeze  C# delay throw (hold)  D octave down  D# octave up  E wet only
               F tap tempo  F# arpeggiator  G arp permutations
+              G# screen view (pages > scope > loop waveform)
+              A audio loop rec/play/dub (hold 1 s = clear)  A# audio undo  B audio stop/start
  Keys act when released. Hold a key and turn a knob for a combo:
    B + knob   loop speed: centre normal, left = reverse (faster further left),
               right = forward (faster further right). MIDI clock follows.
    C + knob   reverb size      C# + knob  throw feedback     E + knob  reverb amount
    F + knob   tempo 40-200     F# + knob 1 arp rate, knob 2 pattern, knob 3 octaves
+   low A + knob  morph time
+   high A + knob 1 audio loop speed/reverse, 2 pitch, 3 level, 4 layer fade
+   high B + knob  audio loop records Pre / Post effects
 
 AUX / FOOTSWITCH = LOOPER
  tap: record > play > overdub > play ...   hold (0.7 s): clear.  On LIBRARY, Aux sends.

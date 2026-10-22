@@ -213,9 +213,10 @@ the high octave holds performance effects.</p>
 <tr><td>F</td><td>SETUP page</td><td><b>Tap tempo</b> — two taps less than 2 s apart</td></tr>
 <tr><td>F♯</td><td>—</td><td><b>Arpeggiator</b> on/off</td></tr>
 <tr><td>G</td><td>TUNE page</td><td>Arp <b>permutations</b> on/off</td></tr>
-<tr><td>A</td><td>ENGINE page</td><td>—</td></tr>
-<tr><td>A♯</td><td>Loop <b>undo</b> last overdub</td><td>—</td></tr>
-<tr><td>B</td><td>Loop <b>stop / start</b></td><td>—</td></tr></table>
+<tr><td>G♯</td><td>—</td><td>Screen <b>view</b>: pages › scope › audio loop waveform</td></tr>
+<tr><td>A</td><td>ENGINE page</td><td><b>Audio loop</b>: record › play › overdub (hold 1 s: clear)</td></tr>
+<tr><td>A♯</td><td>Loop <b>undo</b> last overdub</td><td>Audio loop <b>undo</b> (newest layer)</td></tr>
+<tr><td>B</td><td>Loop <b>stop / start</b></td><td>Audio loop <b>stop / start</b></td></tr></table>
 <p>Keys act when you <b>release</b> them. If you turn a knob while holding a key, the knob does a <b>combo</b> instead and the key's normal action is skipped:</p>
 <table><tr><th>Hold</th><th>Turn</th><th>Result</th></tr>
 <tr><td>B (loop)</td><td>any knob</td><td><b>Loop speed and direction.</b> Centre = normal. Right = forward, faster the further you turn (up to 4×).
@@ -225,7 +226,9 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
 <tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
-<tr><td>A (low, ENGINE)</td><td>any knob</td><td><b>Morph time</b> 0.05–8 s (default 1.5 s)</td></tr></table>
+<tr><td>A (low, ENGINE)</td><td>any knob</td><td><b>Morph time</b> 0.05–8 s (default 1.5 s)</td></tr>
+<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style) / <b>pitch</b> −12…+12 / <b>level</b> / <b>layer fade</b></td></tr>
+<tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
 
 <h2 class="pb">4. The screen</h2>
@@ -303,6 +306,26 @@ the current engine, so you can change engine, tuning or effects while a loop pla
 <div class="grid">{shot("loop_rec", "Recording")}{shot("loop_play", "Playing")}{shot("loop_reverse_toast", "Turning the speed combo")}</div>
 <p>In reverse, notes still begin with their note-on: the looper swaps note-ons and note-offs when it runs backwards.
 Each loop layer plays on its own set of channels, so loop notes never cut off live notes or each other.</p>
+<h3>Audio looper</h3>
+<p>The MIDI loop always plays through the current engine. The <b>audio looper</b> records the sound itself, so you can
+layer different engines: record a pass with Halo, morph to Steel, overdub, and so on. Up to 6 stereo layers, 45 s long.</p>
+<table><tr><th>Action</th><th>How</th></tr>
+<tr><td>Record / play / overdub</td><td>Tap high A: record › play › overdub › play … (a thin line under the loop bar shows the audio loop)</td></tr>
+<tr><td>In time with a MIDI loop</td><td>If a MIDI loop is playing, the audio loop waits for its start and records exactly one cycle, so both stay in time.</td></tr>
+<tr><td>Undo</td><td>High A♯ removes the newest layer (again for the one before).</td></tr>
+<tr><td>Stop / start</td><td>High B.</td></tr>
+<tr><td>Clear</td><td>Hold high A for 1 s.</td></tr>
+<tr><td>Speed &amp; direction</td><td>Hold high A + knob 1: like tape, pitch follows speed; left of centre plays backwards.</td></tr>
+<tr><td>Pitch</td><td>Hold high A + knob 2: −12…+12 semitones, speed unchanged.</td></tr>
+<tr><td>Level / layer fade</td><td>Hold high A + knob 3 / knob 4. Layer fade makes older layers fade a little each pass (off at the right end).</td></tr>
+<tr><td>Pre / Post</td><td>Hold high B + a knob. <b>Pre</b> records the synth before the effects; the loop then goes through the delay and reverb you set now.
+<b>Post</b> records the finished sound with its effects.</td></tr></table>
+<p>Overdubs record at normal speed (the speed returns to 1× when you start one). Each layer records for at least one whole pass,
+so undo always removes exactly what you played.</p>
+<h3>Screen views</h3>
+<p>High G♯ switches the screen between the pages, a <b>scope</b> of the output (steady on the note's waveform, auto-scaled),
+and the <b>audio loop waveform</b> with its playhead. Any page key returns to the pages. The top strip and line 5 stay.</p>
+<div class="grid">{shot("view_scope", "Scope (high G#)")}{shot("view_loop", "Audio loop waveform with playhead")}</div>
 
 <h2>8. Arpeggiator</h2>
 <p>High F♯ turns it on. Hold notes on the DM48X and the arpeggiator plays them one at a time — each on its own channel, so
@@ -373,7 +396,7 @@ Let breath change several things a little rather than one thing a lot. Keep it l
 <h2>13. Performance on the Organelle M</h2>
 <p>The Organelle M runs on a Raspberry Pi Compute Module 3 (four ARM Cortex-A53 cores at 1.2 GHz). Pure Data computes all audio on one of those cores,
 so that single core is the budget. The patch is built for it:</p>
-<ul><li>Each voice switches its DSP off when silent, so only sounding voices cost anything.</li>
+<ul><li>Each voice switches its DSP off when silent, so only sounding voices cost anything. The audio looper's DSP is off until you first record; its 6 × 45 s of stereo buffers take about 95 MB of the M's 1 GB, reserved when the patch loads.</li>
 <li>Saws are band-limited without oversampling; filters are cheap 2-pole designs (Velvet cascades two for 4-pole warmth).</li>
 <li>All control logic is message-based; the arpeggiator, looper and screen run at control rate.</li></ul>
 <p>Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo is the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).

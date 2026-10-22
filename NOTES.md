@@ -60,6 +60,19 @@ This is the working memory for this project: read it first in any new session.
   - Internal channel = 17·layer + MIDI ch.
   - Each voice is keyed by ch·128 + note.
   - Per-voice just intonation reads `engjust[(note-key+120)%12]`.
+- **Audio looper** (`sec_aloop.py`):
+  - **Layers:** 6 stereo layers, `engaL0..5` / `engaR0..5`, 45 s each (about 95 MB, allocated at load).
+  - **Playback:** one `phasor~` playhead reads every layer, and each layer has its own gain (`engag`, used for undo and fade).
+  - **Writing:** one writer (`tabwrite~` with `set` / `start N`) writes the newest layer as input×gate plus existing×k. k is 0 for the first pass and 1 after that. A layer always gets at least one full pass, so a reused layer never contains old audio.
+  - **Wraps:** a control clock (`$0-awrap`) resets the phase and restarts the writer. It is debounced by 20 ms, re-aligned by the MIDI loop's `$0-cycle` when synced, and rescheduled from the current phase when the speed changes.
+  - **Pitch shift:** two crossfaded `vd~` taps; bypassed at 0 semitones.
+  - **Tap points:** Pre `eng-tap-pre` / `eng-aret-pre` (into the FX); Post `eng-tap-postL/R` / `eng-aret-L/R` (before the limiter).
+  - **DSP:** switched off until the first recording (`$0-adsp`).
+- **Screen views** (`scope()` in `sec_oled.py`):
+  - High G# cycles the views; the page rows are gated by `$0-rowson`.
+  - Waveforms are sent as `sendtyped /oled/gWaveform ib 3 <128 y>`, as the Organelle's own patches do.
+  - The scope finds a rising zero crossing in a 1024-sample capture and auto-scales.
+  - The loop view draws the per-layer overviews (`engov<j>`) and the playhead.
 - **Engine morphing:**
   - Every voice has two engine slots, `pd $0-slotA` and `pd $0-slotB`.
   - Loading sends `eng-load A|B symbol engines/NAME`. The engine is created with the argument `eng-A` or `eng-B`, so it reads its knobs as `[r~ $1-p1~]`.
@@ -90,12 +103,6 @@ This is the working memory for this project: read it first in any new session.
 | Juno-104, NESWave, DUST, Mellotron, PLAY | delayed vibrato, PWM sub, tape wow, breath-gated tape | ideas |
 
 ## Roadmap
-0. **Audio looper** (`tools/dm48-engine/sec_aloop.py`, WIP, not wired in yet):
-   - 6 undoable stereo layers.
-   - Hold high A + knob: speed and reverse, pitch shift, level, layer fade.
-   - Pre/Post recording point.
-   - Syncs to the MIDI loop.
-   - Scope / loop-waveform OLED view on high G#.
 1. **Hybrid engine** (`tools/dm48-engine/gen_hybrid.py`, WIP). Two mode knobs:
    - SOURCE: CZ Phase, Vowel formant, Juno Pulse+sub, Breath noise.
    - BODY: Filter, Modal (Elements), Sympathetic Strings (Rings), Tube.

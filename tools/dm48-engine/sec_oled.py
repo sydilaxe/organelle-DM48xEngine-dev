@@ -1,7 +1,7 @@
 """OLED status strip (top 8 pixel rows, above the 5 text lines), redrawn ~12 times a second:
    [7 page tabs]  [loop bar: progress / blinking while recording]  [arp dot]  [breath meter]"""
 from pdgen import Canvas
-from sec_core import chain, to, msg_to
+from sec_core import chain, to, msg_to, setv
 
 OSC = "s oscOut"
 
@@ -45,6 +45,16 @@ def oled():
     o.c(st, 3, dm, 0)
     for q in (1, 2, 3):
         o.c(msg_to(o, dm, f"/oled/gInvertArea 3 {46 + q * 12} 2 1 4", 450 + q * 40, 450), 0, out, 0)
+    # 3b: audio loop: a 1-pixel line under the loop bar (playhead while playing, full while recording)
+    al = chain(o, lpb, ["expr engastate", "sel 2 3 4 1"], 450, 560, outlet=0)
+    o.c(msg_to(o, al, "/oled/gFillArea 3 46 7 48 1 1", 450, 600), 0, out, 0)
+    o.c(msg_to(o, al, "/oled/gFillArea 3 46 7 2 1 1", 650, 600, outlet=3), 0, out, 0)
+    alp = o.obj("t b", 550, 585)
+    o.c(al, 1, alp, 0)
+    o.c(al, 2, alp, 0)
+    o.c(alp, 0, o.obj("s $0-asnap", 600, 610), 0)
+    o.c(msg_to(o, chain(o, alp, ["expr max(1, int(48 * engaph))"], 550, 610), "/oled/gFillArea 3 46 7 $1 1 1", 550, 640),
+        0, out, 0)
     # 2: arp dot at 97
     ar = chain(o, fr, ["v engarpon", "sel 1"], 700, 300, outlet=2)
     o.c(msg_to(o, ar, "/oled/gFillArea 3 97 2 3 4 1", 700, 350), 0, out, 0)
@@ -64,7 +74,10 @@ def rows():
     r = Canvas("screen-rows", w=1200, h=700)
     r.comment("Row N: [N] [bar 37px] text   (PLAY style)  -- or full-width text when bar = -1", 20, 5)
     out = r.obj(OSC, 20, 650)
-    rg = r.obj("r $0-gdraw", 20, 30)
+    rg0 = r.obj("r $0-gdraw", 20, 30)
+    rg = r.obj("spigot 1", 20, 42)                 # closed while the scope / loop view is shown
+    r.c(rg0, 0, rg, 0)
+    r.c(r.obj("r $0-rowson", 120, 30), 0, rg, 1)
     t = to(r, rg, "t a a", 20, 55)
     import os
     if os.environ.get("DBG"):
@@ -104,3 +117,102 @@ def rows():
     r.c(txt, 0, lp, 0)
     r.c(to(r, lp, "list trim", 20, 580), 0, out, 0)
     return r
+
+
+def scope():
+    """High G# cycles the screen: pages > SCOPE (live output) > LOOP (audio loop waveform + playhead) > pages.
+    Draws rows y 9..52 (the page rows); the top strip and line 5 stay."""
+    c = Canvas("scope-view", w=1600, h=1100)
+    c.comment("Screen views: 0 pages, 1 scope, 2 audio loop waveform. Waveforms go out as one gWaveform message.", 20, 5)
+    out = c.obj(OSC, 20, 1050)
+    # next view (the loop view only when there is an audio loop; not on the LIBRARY page)
+    nv = chain(c, c.obj("r eng-view-next", 20, 30),
+               ["expr if(engpage == 6, 0, if(engview == 0, 1, if((engview == 1) && (engastate >= 2), 2, 0)))"], 20, 55)
+    vt = to(c, nv, "t f f f", 20, 80)
+    to(c, vt, "v engview", 150, 105, outlet=2)
+    to(c, to(c, vt, "== 0", 100, 105, outlet=1), "s $0-rowson", 100, 130)
+    vs = to(c, vt, "sel 0 1 2", 20, 130)
+    # back to the pages: redraw the page
+    back = to(c, vs, "t b b", 20, 155)
+    c.c(msg_to(c, back, "/oled/gFillArea 3 0 9 128 44 0", 120, 180, outlet=1), 0, out, 0)
+    to(c, to(c, to(c, back, "delay 1", 20, 180), "expr engpage", 20, 205), "s eng-page", 20, 230)
+    for i, nm in ((1, "SCOPE"), (2, "LOOP WAVE")):
+        to(c, msg_to(c, vs, f"list {nm}  (G# next)", 150 + i * 150, 155, outlet=i), "s $0-toast",
+           150 + i * 150, 180)
+    # a page key leaves the view
+    pk = chain(c, c.obj("r eng-page", 500, 30), ["expr engview > 0", "sel 1"], 500, 55)
+    pkt = to(c, pk, "t b b", 500, 105)
+    to(c, msg_to(c, pkt, "0", 600, 130, outlet=1), "v engview", 600, 155)
+    to(c, msg_to(c, pkt, "1", 500, 130), "s $0-rowson", 500, 155)
+    to(c, to(c, to(c, pkt, "delay 1", 650, 130), "expr engpage", 650, 155), "s eng-page", 650, 180)
+    # frame clock
+    met = c.obj("metro 70", 20, 300)
+    c.c(chain(c, c.obj("r $0-rowson", 120, 250), ["== 0"], 120, 275), 0, met, 0)
+    fr = chain(c, met, ["expr engview", "sel 1 2"], 20, 325)
+    # ---- SCOPE: record 1024 samples, then (next frame) find a rising zero crossing and draw 128 points
+    rec = c.obj("tabwrite~ engscope", 400, 400)
+    c.c(c.obj("r~ eng-scope", 400, 375), 0, rec, 0)
+    sc = c.obj("t b b", 20, 375)
+    c.c(fr, 0, sc, 0)
+    c.c(sc, 0, rec, 0)                                  # (2) arm the next capture
+    zs = to(c, sc, "t b b b b", 120, 400, outlet=1)     # (1) draw the last capture
+    setv(c, zs, "engsczero", 0, 300, 425, outlet=3)
+    zu = to(c, msg_to(c, zs, "500", 120, 425, outlet=2), "until", 120, 450)
+    zi = c.obj("f 1", 120, 475)
+    c.c(msg_to(c, zs, "1", 200, 450, outlet=3), 0, zi, 1)
+    c.c(zu, 0, zi, 0)
+    c.c(to(c, zi, "+ 1", 170, 500), 0, zi, 1)
+    zx = chain(c, zi, ["expr if((engsczero == 0) && (engscope[$f1 - 1] < 0) && (engscope[$f1] >= 0), $f1, -1)",
+                       "moses 1"], 120, 500)
+    to(c, zx, "v engsczero", 170, 550, outlet=1)
+    # peak of the window for auto-scaling
+    to(c, to(c, zs, "array max engscope", 400, 475, outlet=1), "v engscpk", 400, 500)
+    dt = to(c, zs, "t b b b", 20, 625)
+    di = c.obj("f", 20, 700)
+    c.c(msg_to(c, dt, "0", 100, 650, outlet=2), 0, di, 1)
+    c.c(to(c, msg_to(c, dt, "128", 20, 650, outlet=1), "until", 20, 675), 0, di, 0)
+    c.c(to(c, di, "+ 1", 70, 725), 0, di, 1)
+    yx = to(c, di, "expr $f1; int(min(52, max(10, 31 - 20 * engscope[engsczero + $f1 * 3] / max(0.05, engscpk))))",
+            20, 725)
+    yv = c.obj("f", 150, 775)
+    c.c(yx, 1, yv, 1)
+    yt = to(c, yx, "t b f", 20, 750)
+    yw = c.obj("tabwrite engscy", 20, 800)
+    c.c(yt, 1, yw, 1)
+    c.c(yt, 0, yv, 0)
+    c.c(yv, 0, yw, 0)
+    sd = to(c, dt, "t b b", 300, 650)
+    c.c(msg_to(c, sd, "/oled/gFillArea 3 0 9 128 44 0", 400, 675, outlet=1), 0, out, 0)
+    send_wave(c, sd, out, 300, 700)
+    # ---- LOOP: the layers' overviews (summed, scaled by each layer's gain), mirrored, with the playhead
+    lp = c.obj("t b b b b b", 900, 375)
+    c.c(fr, 1, lp, 0)
+    c.c(lp, 4, c.obj("s $0-asnap", 1000, 400), 0)
+    c.c(msg_to(c, lp, "/oled/gFillArea 3 0 9 128 44 0", 1100, 400, outlet=3), 0, out, 0)
+    for half, sign, x in ((0, -1, 900), (1, 1, 1150)):
+        tt = to(c, lp, "t b b b", x, 450 + half * 300, outlet=2 - half)
+        li = c.obj("f", x, 525 + half * 300)
+        c.c(msg_to(c, tt, "0", x + 80, 475 + half * 300, outlet=2), 0, li, 1)
+        c.c(to(c, msg_to(c, tt, "128", x, 475 + half * 300, outlet=1), "until", x, 500 + half * 300), 0, li, 0)
+        c.c(to(c, li, "+ 1", x + 50, 550 + half * 300), 0, li, 1)
+        amp = " + ".join(f"engag[{j}] * engov{j}[$f1]" for j in range(6))
+        lx = to(c, li, f"expr $f1; int({30 if sign < 0 else 32} {'-' if sign < 0 else '+'} min(1, {amp}) * 20)",
+                x, 550 + half * 300)
+        lv = c.obj("f", x + 130, 600 + half * 300)
+        c.c(lx, 1, lv, 1)
+        lt = to(c, lx, "t b f", x, 575 + half * 300)
+        lw = c.obj("tabwrite engscy", x, 625 + half * 300)
+        c.c(lt, 1, lw, 1)
+        c.c(lt, 0, lv, 0)
+        c.c(lv, 0, lw, 0)
+        send_wave(c, tt, out, x + 150, 650 + half * 300)
+    # playhead
+    c.c(msg_to(c, to(c, lp, "expr int(engaph * 127)", 1400, 400, outlet=0), "/oled/gInvertArea 3 $1 9 1 44", 1400, 425),
+        0, out, 0)
+    return c
+
+
+def send_wave(c, src, out, x, y):
+    """engscy (128 y values) -> one /oled/gWaveform message (as the Organelle's own patches do)"""
+    g = to(c, to(c, src, "array get engscy", x, y), "list prepend sendtyped /oled/gWaveform ib 3", x, y + 25)
+    c.c(to(c, g, "list trim", x, y + 50), 0, out, 0)

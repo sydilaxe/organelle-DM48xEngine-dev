@@ -116,7 +116,7 @@ def keys():
     setv(ky, rt, "engheld", -1, 550, 250, outlet=0)
     # throw always ends on release
     to(ky, msg_to(ky, to(ky, rl, "sel 73", 450, 225), "0", 450, 250), "s eng-throw", 450, 275)
-    fsel = to(ky, act, "sel 60 61 62 63 64 65 67 69 70 71 72 74 75 76 77 78 79", 250, 330)
+    fsel = to(ky, act, "sel 60 61 62 63 64 65 67 69 70 71 72 74 75 76 77 78 79 80 81 82 83", 250, 330)
     spage = ky.obj("s eng-page", 250, 420)
     for i, pg in ((0, 0), (1, 6), (2, 1), (4, 2), (5, 3), (6, 4), (7, 5)):
         ky.c(msg_to(ky, fsel, str(pg), 250 + i * 30, 360, outlet=i), 0, spage, 0)
@@ -153,6 +153,9 @@ def keys():
     # tap tempo: time between two taps
     toggle(15, "$0-arpstate", "Arp", 1550)
     toggle(16, "$0-perm", "Breath permute", 1700)
+    # high G#: screen view (pages > scope > loop waveform); high A/A#/B: audio looper tap / undo / stop-start
+    for i, nm in enumerate(("eng-view-next", "eng-aloop-key", "eng-aloop-undo", "eng-aloop-stopstart")):
+        to(ky, to(ky, fsel, "t b", 1850 + i * 90, 360, outlet=17 + i), f"s {nm}", 1850 + i * 90, 385)
     # tap tempo: two taps less than 2 s apart (the first tap only arms it)
     tp = to(ky, fsel, "t b b b", 1350, 360, outlet=14)
     tmr = ky.obj("timer", 1350, 435)
@@ -173,14 +176,14 @@ def combos():
     cb.comment("Hold + turn any knob. B: loop speed (centre normal, left reverse faster, right forward faster)", 20, 5)
     cb.comment("C: reverb size  C#: throw feedback  E: reverb amount  F: tempo 40-200 BPM  F#: arp rate / pattern / octaves (knobs 1-3)", 20, 22)
     cu = chain(cb, cb.obj("r $0-combo", 20, 50), ["unpack 0 0"], 20, 75)
-    vals = [cb.obj("f", 20 + i * 220, 200) for i in range(7)]
+    vals = [cb.obj("f", 20 + i * 220, 200) for i in range(9)]
     for v_ in vals:
         cb.c(cu, 1, v_, 1)                    # value first (unpack: right outlet fires first)
     ct = to(cb, cu, "t b f", 300, 100)        # then the knob number
     to(cb, ct, "v engcombok", 400, 125, outlet=1)
     tb = to(cb, ct, "t b b", 300, 125)        # then: mark moved, dispatch on the held key
     setv(cb, tb, "engmoved", 1, 400, 150, outlet=1)
-    rt = chain(cb, tb, ["v engheld", "sel 71 72 73 76 77 78 69"], 300, 150)
+    rt = chain(cb, tb, ["v engheld", "sel 71 72 73 76 77 78 69 81 83"], 300, 150)
     for i, v_ in enumerate(vals):
         cb.c(rt, i, v_, 0)
     # B: speed
@@ -224,6 +227,34 @@ def combos():
     to(cb, mt, "v engmorphms", 1400, 250, outlet=1)
     to(cb, msg_to(cb, to(cb, mt, "expr int($f1 / 100) / 10", 1300, 250), "list Morph time $1 s", 1300, 275),
        "s $0-toast", 1300, 300)
+    # high A (audio looper): knob 1 speed/direction, 2 pitch, 3 level, 4 layer fade
+    lk = chain(cb, vals[7], ["expr engcombok; $f1"], 20, 550)
+    lkp = cb.obj("pack 0 0", 20, 575)
+    cb.c(lk, 1, lkp, 1)
+    cb.c(lk, 0, lkp, 0)
+    lkr = to(cb, lkp, "route 1 2 3 4", 20, 600)
+    asp = chain(cb, lkr, ["expr if(abs($f1 - 0.5) < 0.06, 1, if($f1 > 0.5, pow(2, ($f1 - 0.56) / 0.44 * 2), "
+                          "-pow(2, (0.44 - $f1) / 0.44 * 2)))", "expr int($f1 * 10 + if($f1 > 0, 0.5, -0.5)) / 10",
+                          "change", "t f f"], 20, 625)
+    to(cb, asp, "s eng-aloop-speed", 120, 725, outlet=1)
+    to(cb, msg_to(cb, asp, "list Audio speed $1 x", 20, 725), "s $0-toast", 20, 750)
+    apc = chain(cb, lkr, ["expr int(($f1 - 0.5) * 24.99)", "change", "t f f"], 250, 625, outlet=1)
+    to(cb, apc, "s eng-aloop-pitch", 350, 700, outlet=1)
+    to(cb, msg_to(cb, apc, "list Audio pitch $1 st", 250, 700), "s $0-toast", 250, 725)
+    alv = chain(cb, lkr, ["t f f"], 450, 625, outlet=2)
+    to(cb, alv, "s eng-aloop-level", 550, 650, outlet=1)
+    to(cb, msg_to(cb, to(cb, alv, "expr int($f1 * 100)", 450, 650), "list Audio level $1", 450, 675), "s $0-toast", 450, 700)
+    afd = chain(cb, lkr, ["expr if($f1 > 0.97, 1, 0.5 + $f1 * 0.5)", "t f f"], 650, 625, outlet=3)
+    to(cb, afd, "s eng-aloop-fade", 750, 675, outlet=1)
+    afs = chain(cb, afd, ["expr int((1 - $f1) * 100)", "sel 0"], 650, 675)
+    to(cb, msg_to(cb, afs, "list Layer fade off", 650, 725), "s $0-toast", 650, 750)
+    to(cb, msg_to(cb, afs, "list Layer fade $1", 760, 725, outlet=1), "s $0-toast", 760, 750)
+    # high B (audio looper): any knob = record Pre / Post the effects
+    pp = chain(cb, vals[8], ["> 0.5", "change", "t f f"], 900, 550)
+    to(cb, pp, "s eng-aloop-post", 1000, 600, outlet=1)
+    pps = to(cb, pp, "sel 0 1", 900, 600)
+    to(cb, msg_to(cb, pps, "list Audio loop PRE effects", 900, 625), "s $0-toast", 900, 650)
+    to(cb, msg_to(cb, pps, "list Audio loop POST effects", 1050, 625, outlet=1), "s $0-toast", 1050, 650)
     # F: tempo
     to(cb, to(cb, vals[4], "expr 60000 / (40 + int($f1 * 160))", 900, 225), "s eng-dtime-ms", 900, 250)
     return cb

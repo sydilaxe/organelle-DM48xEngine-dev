@@ -8,7 +8,8 @@ from sec_ui import ui, settings
 from sec_rest import engine_manager, library, audio, glue, MAXBYTES, MAXEV
 from sec_midiout import midi_out, clock
 from sec_arp import arp
-from sec_oled import oled, rows
+from sec_oled import oled, rows, scope
+import sec_aloop
 from sec_ui import SCALE_TABLE, NSCALES, FAM_START, FAM_COUNT, FAM_OF
 
 
@@ -23,6 +24,8 @@ def build(out_dir):
         m.obj(f"array define {nm} {size}", 700, y)
         y += 22
     m.obj(f"array define engscales {NSCALES * 12}", 700, 60)
+    for i, (nm, size) in enumerate(sec_aloop.arrays()):
+        m.obj(f"array define {nm} {size}", 1300 + (i // 20) * 150, 20 + (i % 20) * 22)
     for nm, vals in (("engfamstart", FAM_START), ("engfamcount", FAM_COUNT), ("engfamof", FAM_OF)):
         m.obj(f"array define {nm} {len(vals)}", 900, 20 + len(m.items) % 40)
     scl = m.msg("; engscales 0 " + " ".join(str(round(v, 4)) for v in SCALE_TABLE)
@@ -35,11 +38,12 @@ def build(out_dir):
     vals = ("engmode engcurve engnr enggr engpage englstate engllen engltop engldub engli englnum englpos "
             "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engpend engbus engloaded engmorph engslA engslB engmorphms engrxmute engrsize engfreeze engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engcombok engtunidx enggn enggv "
             "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey").split()
+    vals = vals + sec_aloop.VALUES
     for i, nm in enumerate(vals):
         m.obj(f"value {nm}", 950 + (i // 18) * 150, 90 + (i % 18) * 22)
     y = 80
     for c in (midi_in(), keys(), combos(), process(), monitor(), looper(), ui(), settings(), engine_manager(),
-              library(), audio(), glue(), midi_out(), clock(), arp(), oled(), rows()):
+              library(), audio(), glue(), midi_out(), clock(), arp(), oled(), rows(), sec_aloop.aloop(), scope()):
         m.sub(c, 20, y)
         y += 25
     # ---- start-up, in order (right outlet first)
