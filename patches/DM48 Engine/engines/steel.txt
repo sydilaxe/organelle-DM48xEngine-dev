@@ -1,0 +1,2 @@
+Tone Sustain Steel Bow;
+0.55 0.5 0.35 0.4;

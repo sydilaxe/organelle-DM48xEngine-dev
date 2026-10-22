@@ -1,0 +1,2 @@
+Mod Sharp Detune Drive;
+0.3 0.25 0.35 0.3;

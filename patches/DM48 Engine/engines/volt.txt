@@ -1,0 +1,2 @@
+Fold Grit Detune Tone;
+0.3 0.2 0.35 0.55;
