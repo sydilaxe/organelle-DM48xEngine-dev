@@ -430,7 +430,7 @@ input — not yet on an Organelle with a DM48X. Sounds, levels and CPU will need
 </body></html>"""
 
 open("manual.html", "w").write(html)
-subprocess.run(["/opt/pw-browsers/chromium", "--headless", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
+subprocess.run([os.environ.get("CHROME", "/opt/pw-browsers/chromium"), "--headless", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
                 f"--print-to-pdf={OUT_PDF}", "file://" + os.path.abspath("manual.html")], check=True,
                capture_output=True)
 print("wrote", OUT_PDF)
