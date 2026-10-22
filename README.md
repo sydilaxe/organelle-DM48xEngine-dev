@@ -28,6 +28,28 @@ The patches are **generated** by Python scripts, so they can be rebuilt and test
 
 Requirements for building and testing: Python 3, numpy, Pure Data 0.53+ (`pd -batch`), and Chromium for the manual PDF.
 
+## Releases
+
+Ready-to-install zips are on the **Releases** page. They are built by `.github/workflows/release.yml`.
+
+To make a release:
+
+```
+git tag v1.0
+git push origin v1.0
+```
+
+The workflow then:
+
+1. Rebuilds DM48 Engine and its manual from `tools/`.
+2. Fails if the committed `patches/` folder doesn't match the source.
+3. Runs `ci_check.py`, which plays the patch offline in Pure Data and checks engines, morphing, both loopers, undo and the tuning library.
+4. Publishes the zips and the manual as a GitHub Release.
+
+You can also run it by hand from **Actions › Release build › Run workflow**. That gives the zips as a download, without making a release.
+
+To build locally: `tools/dm48-engine/build.sh`, then `tools/package.sh v1.0`. The zips go to `dist/`.
+
 ## Notes
 
 See **[NOTES.md](NOTES.md)** for design decisions, Pd and Organelle gotchas, the DM48X tuning format, what we learned from reference patches, and the roadmap.

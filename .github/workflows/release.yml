@@ -1,0 +1,82 @@
+# Release build: rebuild the patches and manual from source, test them in Pure Data, package the zips.
+#  - Push a tag like v1.0  -> a GitHub Release with the zips and the manual attached.
+#  - Actions tab > "Release build" > Run workflow  -> the same build, zips kept as a workflow artifact.
+name: Release build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label for the zip names (no release is created)"
+        default: "dev"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pure Data and Python packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends puredata-core python3-numpy zip
+          pd -version
+
+      - name: Version
+        id: v
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then v="${GITHUB_REF_NAME}"; else v="${{ inputs.version || 'dev' }}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Build DM48 Engine and its manual
+        working-directory: tools/dm48-engine
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: ./build.sh
+
+      - name: Committed patch matches its source
+        run: |
+          if ! git diff --quiet -- patches/; then
+            git status --short -- patches/
+            echo "::error::patches/ is out of date - run tools/dm48-engine/build.sh and commit the result"
+            exit 1
+          fi
+
+      - name: Test in Pure Data
+        working-directory: tools/dm48-engine
+        run: |
+          python3 gen_all.py "../DM48 Engine"
+          ./tload.sh "../DM48 Engine"
+          python3 ci_check.py "../DM48 Engine"
+
+      - name: Package
+        run: tools/package.sh "${{ steps.v.outputs.version }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: organelle-patches-${{ steps.v.outputs.version }}
+          path: dist/
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          cat > notes.md <<EOF
+          ## Install
+          Unzip and copy the folder(s) into the Organelle's **Patches** folder (USB stick, SD card, or the OS 5 web editor).
+
+          - **DM48_Engine-$v.zip**: the DM48 Engine patch (breath synth host, MIDI and audio loopers, DM48X tuning library)
+          - **DM48_Engine_Manual-$v.pdf**: the manual
+          - **MPE_Reed**, **MPE_Super**, **MPE_Super_JI** (A, Bb, C, D) and **DM48X_Tunings**: the earlier patches
+
+          Built from source and tested offline in Pure Data by the release workflow.
+          EOF
+          gh release create "$v" dist/* --title "Organelle patches $v" --notes-file notes.md --generate-notes
