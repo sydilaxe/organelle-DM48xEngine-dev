@@ -38,7 +38,9 @@ jobs:
         working-directory: tools/dm48-engine
         env:
           CHROME: /usr/bin/google-chrome
-        run: ./build.sh
+        run: |
+          set -o pipefail
+          ./build.sh 2>&1 | tee build.log || { tail -n 25 build.log | sed 's/^/::error::/'; exit 1; }
 
       - name: Committed patch matches its source
         run: |
@@ -51,9 +53,10 @@ jobs:
       - name: Test in Pure Data
         working-directory: tools/dm48-engine
         run: |
+          set -o pipefail
           python3 gen_all.py "../DM48 Engine"
           ./tload.sh "../DM48 Engine"
-          python3 ci_check.py "../DM48 Engine"
+          python3 ci_check.py "../DM48 Engine" 2>&1 | tee check.log || { grep -E "FAIL|Error|error|Traceback" check.log | tail -n 25 | sed 's/^/::error::/'; exit 1; }
 
       - name: Package
         run: tools/package.sh "${{ steps.v.outputs.version }}"

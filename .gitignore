@@ -7,3 +7,5 @@ t_load.pd
 tools/dm48-engine/manual.html
 tools/DM48 Engine/
 dist/
+tools/dm48-engine/build.log
+tools/dm48-engine/check.log
