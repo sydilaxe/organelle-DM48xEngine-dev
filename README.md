@@ -46,7 +46,7 @@ The workflow then:
 3. Runs `ci_check.py`, which plays the patch offline in Pure Data and checks engines, morphing, both loopers, undo and the tuning library.
 4. Publishes the zips and the manual as a GitHub Release.
 
-You can also run it by hand from **Actions › Release build › Run workflow**. That gives the zips as a download, without making a release.
+You can also run it by hand from **Actions › Release build › Run workflow**. That gives the zips as a download, without making a release. Tick **publish** (with a version such as `v1.2`) to create the tag and the release from that run instead. A release drafted on GitHub's Releases page works too: its new tag runs the workflow, which attaches the zips.
 
 To build locally: `tools/dm48-engine/build.sh`, then `tools/package.sh v1.0`. The zips go to `dist/`.
 

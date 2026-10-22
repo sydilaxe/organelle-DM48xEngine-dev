@@ -1,6 +1,8 @@
 # Release build: rebuild the patches and manual from source, test them in Pure Data, package the zips.
 #  - Push a tag like v1.0  -> a GitHub Release with the zips and the manual attached.
-#  - Actions tab > "Release build" > Run workflow  -> the same build, zips kept as a workflow artifact.
+#  - Actions tab > "Release build" > Run workflow  -> the same build, zips kept as a workflow artifact;
+#    tick "publish" to also create the tag (e.g. v1.0) and the GitHub Release from that run.
+#  - A release drafted on GitHub's Releases page creates its tag, which runs this too: the zips are attached to it.
 name: Release build
 
 on:
@@ -9,8 +11,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version label for the zip names (no release is created)"
+        description: "Version, e.g. v1.0 (also the tag name when publishing)"
         default: "dev"
+      publish:
+        description: "Publish a GitHub Release (creates the tag at this commit)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -67,7 +73,7 @@ jobs:
           path: dist/
 
       - name: Publish the release
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || inputs.publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -82,4 +88,8 @@ jobs:
 
           Built from source and tested offline in Pure Data by the release workflow.
           EOF
-          gh release create "$v" dist/* --title "Organelle patches $v" --notes-file notes.md --generate-notes
+          if gh release view "$v" >/dev/null 2>&1; then
+            gh release upload "$v" dist/* --clobber
+          else
+            gh release create "$v" dist/* --target "$GITHUB_SHA" --title "Organelle patches $v" --notes-file notes.md --generate-notes
+          fi
