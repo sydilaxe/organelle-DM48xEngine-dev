@@ -63,6 +63,7 @@ This is the working memory for this project: read it first in any new session.
 - **Audio looper** (`sec_aloop.py`):
   - **Layers:** 6 stereo layers, `engaL0..5` / `engaR0..5`, 45 s each (about 95 MB, allocated at load).
   - **Playback:** one `phasor~` playhead reads every layer, and each layer has its own gain (`engag`, used for undo and fade).
+  - **Speed per layer:** each layer stores its own mapping, read index = phase × A + B. A is ±(samples per pass at the recording speed) and B is 0 or the length. Overdubs at any speed or direction therefore follow later speed changes like tape (`$0-alayset j A B`). Layers stopped before a full pass are marked `engadirty` and zeroed when reused.
   - **Writing:** one writer (`tabwrite~` with `set` / `start N`) writes the newest layer as input×gate plus existing×k. k is 0 for the first pass and 1 after that. A layer always gets at least one full pass, so a reused layer never contains old audio.
   - **Wraps:** a control clock (`$0-awrap`) resets the phase and restarts the writer. It is debounced by 20 ms, re-aligned by the MIDI loop's `$0-cycle` when synced, and rescheduled from the current phase when the speed changes.
   - **Pitch shift:** two crossfaded `vd~` taps; bypassed at 0 semitones.

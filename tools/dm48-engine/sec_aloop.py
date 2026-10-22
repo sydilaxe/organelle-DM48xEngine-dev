@@ -25,12 +25,12 @@ def arrays():
     out = []
     for j in range(NL):
         out += [(f"engaL{j}", MAXA), (f"engaR{j}", MAXA), (f"engov{j}", 128)]
-    out += [("engaon", NL), ("engag", NL), ("engaage", NL), ("engrecov", RECOV), ("engscope", 1024), ("engscy", 128)]
+    out += [("engadirty", NL), ("engaon", NL), ("engag", NL), ("engaage", NL), ("engrecov", RECOV), ("engscope", 1024), ("engscy", 128)]
     return out
 
 
 VALUES = ("engastate engalen engalenms engaspd engapitch engalvl engafb engapost engasr engamaxms engaw engak "
-          "engatail engasync engacnt engaph engview engatop engarecn engapk").split()
+          "engatail engasync engacnt engaph engview engatop engarecn engapk engawA engawB").split()
 
 
 def mul2(c, a, b, x, y):
@@ -91,9 +91,23 @@ def dsp():
     ph = a.obj("phasor~", 600, 110)
     a.c(a.obj("r $0-afreq", 600, 80), 0, ph, 0)
     a.c(a.obj("r $0-aphase", 680, 80), 0, ph, 1)
-    idx = a.obj("*~ 0", 600, 140)
-    a.c(ph, 0, idx, 0)
-    a.c(a.obj("r $0-alen", 680, 115), 0, idx, 1)
+    # each layer has its own length and direction (it was recorded at some loop speed):
+    # read index = phase x A + B, with A = +-(samples per loop pass), B = 0 (forward) or the length (reverse)
+    lidx = []
+    for j in range(NL):
+        ia = a.obj("*~ 0", 600 + j * 120, 140)
+        a.c(ph, 0, ia, 0)
+        a.c(a.obj(f"r $0-alayA{j}", 650 + j * 120, 115), 0, ia, 1)
+        ib = a.obj("+~ 0", 600 + j * 120, 165)
+        a.c(ia, 0, ib, 0)
+        a.c(a.obj(f"r $0-alayB{j}", 650 + j * 120, 140), 0, ib, 1)
+        lidx.append(ib)
+    widx = a.obj("*~ 0", 1400, 140)
+    a.c(ph, 0, widx, 0)
+    a.c(a.obj("r $0-awA", 1450, 115), 0, widx, 1)
+    widx2 = a.obj("+~ 0", 1400, 165)
+    a.c(widx, 0, widx2, 0)
+    a.c(a.obj("r $0-awB", 1450, 140), 0, widx2, 1)
     sn = a.obj("snapshot~", 750, 140)
     a.c(ph, 0, sn, 0)
     a.c(a.obj("r $0-asnap", 830, 115), 0, sn, 0)
@@ -105,7 +119,7 @@ def dsp():
         for j in range(NL):
             x = 20 + j * 160 + (0 if side == "L" else 1000)
             rd = a.obj(f"tabread4~ enga{side}{j}", x, 220)
-            a.c(idx, 0, rd, 0)
+            a.c(lidx[j], 0, rd, 0)
             g = smooth_msg(a, f"$0-ag{j}", 60, x + 80, 195) if side == "L" else gains[j]
             if side == "L":
                 gains_tmp.append(g)
@@ -150,7 +164,7 @@ def dsp():
     ksig = chain(a, a.obj("r $0-aksig", 1250, 800), ["sig~"], 1250, 825)
     for side, src, x in (("L", inL, 20), ("R", inR, 500)):
         rd = a.obj(f"tabread4~ enga{side}0", x + 200, 880)
-        a.c(idx, 0, rd, 0)
+        a.c(widx2, 0, rd, 0)
         a.c(a.obj(f"r $0-awset{side}", x + 200, 855), 0, rd, 0)
         wr = a.obj("expr~ $v1 * $v2 + $v3 * $v4", x, 920)
         a.c(src, 0, wr, 0)
@@ -199,6 +213,30 @@ def control():
     for j in range(NL):
         send(a, rt, "$1 60", f"$0-ag{j}", 20 + j * 60, 300, outlet=j)
 
+    # ---------- layer mapping: [s $0-alayset] "j A B" (also the writer's, when j is the write layer)
+    ls_ = chain(a, a.obj("r $0-alayset", 20, 350), ["t a a"], 20, 375)
+    lrt = to(a, ls_, "route " + " ".join(str(j) for j in range(NL)), 20, 400)
+    for j in range(NL):
+        lu = to(a, lrt, "unpack 0 0", 20 + j * 70, 425, outlet=j)
+        to(a, lu, f"s $0-alayB{j}", 60 + j * 70, 450, outlet=1)
+        to(a, lu, f"s $0-alayA{j}", 20 + j * 70, 475)
+    lw = a.obj("spigot", 500, 400)
+    a.c(to(a, ls_, "expr $f1 == engaw", 560, 400, outlet=1), 0, lw, 1)
+    a.c(ls_, 0, lw, 0)
+    lwu = to(a, lw, "unpack 0 0 0", 500, 425)
+    tB = to(a, lwu, "t f f", 560, 450, outlet=2)
+    to(a, tB, "v engawB", 620, 475, outlet=1)
+    to(a, tB, "s $0-awB", 560, 475)
+    tA = to(a, lwu, "t f f", 500, 450, outlet=1)
+    to(a, tA, "v engawA", 450, 500, outlet=1)
+    to(a, tA, "s $0-awA", 500, 475)
+    # the first take: its length is known when it ends ([s $0-alen])
+    bl = chain(a, a.obj("r $0-alen", 750, 350), ["t b", "expr engaw; engalen; 0"], 750, 375)
+    blp = a.obj("pack 0 0 0", 750, 450)
+    for k in (2, 1, 0):
+        a.c(bl, k, blp, k)
+    to(a, blp, "s $0-alayset", 750, 475)
+
     # ---------- write layer: [s $0-awlayer] j
     wl = chain(a, a.obj("r $0-awlayer", 500, 200), ["t f f f"], 500, 225)
     to(a, wl, "v engaw", 650, 250, outlet=2)
@@ -222,7 +260,18 @@ def control():
     tabset(a, ul, "engaw; 1", "engaon", 1450, 250, outlet=2)
     to(a, to(a, ul, "expr engacnt + 1", 1650, 250, outlet=1), "v engacnt", 1650, 275)
     tabset(a, ul, "engaw; engacnt", "engaage", 1800, 250, outlet=0)
-    send(a, to(a, ul, "expr engaw", 1300, 300, outlet=0), "1 $1", "$0-asetgain", 1300, 325)
+    ug = to(a, ul, "t b b b", 1300, 300, outlet=0)
+    send(a, to(a, ug, "expr engaw", 1300, 325, outlet=0), "1 $1", "$0-asetgain", 1300, 350)
+    um = to(a, ug, "expr engaw; if(engaspd > 0, 1, -1) * int(engalen / max(0.05, abs(engaspd))); "
+                   "if(engaspd > 0, 0, 1) * int(engalen / max(0.05, abs(engaspd)))", 1400, 325, outlet=1)
+    ump = a.obj("pack 0 0 0", 1400, 350)
+    for k in (2, 1, 0):
+        a.c(um, k, ump, k)
+    to(a, ump, "s $0-alayset", 1400, 375)
+    zd = chain(a, ug, ["expr if(engadirty[engaw], engaw, -1)", "moses 0"], 1650, 325, outlet=2)
+    zt = to(a, zd, "t f f", 1700, 375, outlet=1)
+    msg_to(a, zt, "; engaL$1 const 0; engaR$1 const 0", 1700, 400, outlet=1)
+    tabset(a, zt, "$f1; 0", "engadirty", 1850, 400, outlet=0)
 
     # ---------- loop wrap: playhead to the start, writer to the start, fade older layers, schedule the next
     wr = chain(a, a.obj("r $0-awrap", 20, 450), ["t b b"], 20, 475)
@@ -266,10 +315,10 @@ def control():
     setv(a, wb, "engak", 0, 1400, 500, outlet=4)
     send(a, wb, "0", "$0-aksig", 1450, 500, outlet=4)
     to(a, wb, "s $0-asnap", 1550, 500, outlet=3)
-    st0 = to(a, wb, "expr int(engaph * engalen + 64) % max(1, engalen)", 1600, 525, outlet=2)
+    st0 = to(a, wb, "expr int(engaph * engawA + engawB + 64) % max(1, int(abs(engawA)))", 1600, 525, outlet=2)
     send(a, st0, "start $1", "$0-awcmd", 1600, 550)
     p1 = a.obj("delay", 1300, 550)
-    a.c(to(a, wb, "expr engalenms", 1300, 525), 0, p1, 0)
+    a.c(to(a, wb, "expr engalenms / max(0.05, abs(engaspd))", 1300, 525), 0, p1, 0)
     a.c(msg_to(a, a.obj("r $0-awcancel", 1400, 525), "stop", 1400, 550), 0, p1, 0)
     # first pass complete: from now on the layer adds to itself; a finishing tail ends here
     p1t = to(a, p1, "t b b b", 1300, 575)
@@ -277,7 +326,10 @@ def control():
     send(a, p1t, "1", "$0-aksig", 1450, 600, outlet=1)
     to(a, chain(a, p1t, ["expr engatail", "sel 1"], 1300, 600), "s $0-awend", 1300, 650)
     # stop writing: [s $0-awend]
-    we = chain(a, a.obj("r $0-awend", 1700, 450), ["t b b b"], 1700, 475)
+    we0 = chain(a, a.obj("r $0-awend", 1700, 425), ["t b b"], 1700, 440)
+    tabset(a, chain(a, we0, ["expr (engak == 0) && (engaw >= 0)", "sel 1"], 1850, 440, outlet=1),
+           "engaw; 1", "engadirty", 1850, 490)
+    we = to(a, we0, "t b b b", 1700, 475)
     setv(a, we, "engatail", 0, 1700, 500, outlet=2)
     send(a, we, "stop", "$0-awcmd", 1800, 500, outlet=1)
     send(a, we, "0", "$0-agatesig", 1900, 500, outlet=0)
@@ -383,7 +435,7 @@ def control():
                                  ("engarecn", 0))):
         setv(a, rs, nm, v, 280 + i * 60, 1900, outlet=6)
     send(a, rs, "0", "$0-afreq", 650, 1900, outlet=5)
-    send(a, rs, "0", "$0-alen", 720, 1900, outlet=5)
+    send(a, rs, "0", "$0-alen", 720, 1900, outlet=4)
     send(a, rs, "0", "$0-aksig", 790, 1900, outlet=5)
     send(a, rs, "1", "$0-agatesig", 860, 1900, outlet=4)
     send(a, rs, "start 0", "$0-awcmd", 930, 1900, outlet=3)
@@ -418,8 +470,12 @@ def control():
 
     # ---------- overdub start (normal speed only): [s $0-adubstart]
     ds = chain(a, a.obj("r $0-adubstart", 20, 2350), ["t b b"], 20, 2375)
-    to(a, chain(a, ds, ["expr engaspd != 1", "sel 1"], 120, 2400, outlet=1), "s $0-aspeed1", 120, 2450)
-    dt = chain(a, ds, ["expr engatail", "sel 1 0"], 20, 2400)
+    fit = chain(a, ds, [f"expr engalen / max(0.05, abs(engaspd)) <= {MAXA}", "sel 0"], 120, 2400, outlet=1)
+    a.c(msg_to(a, fit, "list Audio: too slow to overdub this loop", 120, 2450), 0, toast, 0)
+    dg = a.obj("spigot", 20, 2375)
+    a.c(ds, 0, dg, 0)
+    a.c(to(a, ds, f"expr engalen / max(0.05, abs(engaspd)) <= {MAXA}", 250, 2350, outlet=1), 0, dg, 1)
+    dt = chain(a, dg, ["expr engatail", "sel 1 0"], 20, 2400)
     # the layer's first pass is still finishing: carry on with the same layer
     sl = to(a, dt, "t b b b", 20, 2450)
     setv(a, sl, "engatail", 0, 20, 2475, outlet=2)
@@ -506,7 +562,9 @@ def control():
     # ---------- speed (hold A + knob 1): [s eng-aloop-speed] v
     sp_ = chain(a, a.obj("r eng-aloop-speed", 20, 3200), ["t f f"], 20, 3225)
     # an overdub ends before the speed changes (overdubs record at normal speed)
-    to(a, chain(a, sp_, ["expr (engastate == 4) && ($f1 != 1)", "sel 1"], 150, 3250, outlet=1), "s $0-adubend", 150, 3300)
+    spc = to(a, sp_, "t f f", 150, 3240, outlet=1)
+    to(a, chain(a, spc, ["expr (engastate == 4) && ($f1 != engaspd)", "sel 1"], 150, 3265, outlet=1), "s $0-adubend", 150, 3315)
+    to(a, chain(a, spc, ["expr engatail && ($f1 != engaspd)", "sel 1"], 300, 3265, outlet=0), "s $0-awend", 300, 3315)
     spd = to(a, sp_, "t b f", 20, 3250)
     to(a, spd, "v engaspd", 100, 3275, outlet=1)
     spt = to(a, spd, "t b b b", 20, 3275)
@@ -522,7 +580,6 @@ def control():
     # the regular wrap clock waits for this one
     to(a, to(a, rem, "t b", 250, 3375, outlet=1), "s $0-awstopnext", 250, 3400)
     # speed back to 1 for an overdub
-    send(a, a.obj("r $0-aspeed1", 700, 3200), "1", "eng-aloop-speed", 700, 3225)
     # ---------- pitch (hold A + knob 2): semitones
     pt = chain(a, a.obj("r eng-aloop-pitch", 900, 3200), ["t f f f"], 900, 3225)
     to(a, pt, "v engapitch", 1100, 3250, outlet=2)

@@ -24,6 +24,7 @@ KEYS  (the Organelle keyboard is a control surface; play the DM48X)
    low A + knob  morph time
    high A + knob 1 audio loop speed/reverse, 2 pitch, 3 level, 4 layer fade
    high B + knob  audio loop records Pre / Post effects
+   Audio overdubs keep the speed they were recorded at (tape style): dub at 2x, play at 1x = an octave down.
 
 AUX / FOOTSWITCH = LOOPER
  tap: record > play > overdub > play ...   hold (0.7 s): clear.  On LIBRARY, Aux sends.

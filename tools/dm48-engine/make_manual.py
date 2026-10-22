@@ -320,8 +320,11 @@ layer different engines: record a pass with Halo, morph to Steel, overdub, and s
 <tr><td>Level / layer fade</td><td>Hold high A + knob 3 / knob 4. Layer fade makes older layers fade a little each pass (off at the right end).</td></tr>
 <tr><td>Pre / Post</td><td>Hold high B + a knob. <b>Pre</b> records the synth before the effects; the loop then goes through the delay and reverb you set now.
 <b>Post</b> records the finished sound with its effects.</td></tr></table>
-<p>Overdubs record at normal speed (the speed returns to 1× when you start one). Each layer records for at least one whole pass,
-so undo always removes exactly what you played.</p>
+<p><b>Overdub at any speed, like tape.</b> Each layer remembers the speed (and direction) it was recorded at. Overdub at 2× and then
+bring the loop back to 1×: that layer plays at half speed, an octave lower and stretched, while the first take plays normally.
+A layer recorded in reverse plays backwards when the loop runs forwards. Changing the speed ends an overdub; the next one is a new layer
+at the new speed. A layer holds up to 45 s, so a long loop can't be overdubbed very slowly (the screen says so).
+Each layer records for at least one whole pass, so undo always removes exactly what you played.</p>
 <h3>Screen views</h3>
 <p>High G♯ switches the screen between the pages, a <b>scope</b> of the output (steady on the note's waveform, auto-scaled),
 and the <b>audio loop waveform</b> with its playhead. Any page key returns to the pages. The top strip and line 5 stay.</p>
