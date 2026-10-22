@@ -6,11 +6,11 @@
 #X obj 20 55 line~;
 #X obj 300 55 line~;
 #X obj 500 55 line~;
-#X obj 650 30 r~ eng-p1~;
-#X obj 740 30 r~ eng-p2~;
-#X obj 830 30 r~ eng-p4~;
+#X obj 650 30 r~ \$1-p1~;
+#X obj 740 30 r~ \$1-p2~;
+#X obj 830 30 r~ \$1-p4~;
 #X obj 920 30 r~ eng-bamt~;
-#X obj 300 80 r eng-p3;
+#X obj 300 80 r \$1-p3;
 #X obj 300 105 expr 20 - \$f1 * 19.7;
 #X obj 300 140 lop~ 10;
 #X obj 650 80 *~;

@@ -27,7 +27,6 @@ def build(out_dir):
     s_pitch = v.obj("s $0-pitch", 20, 840)
     s_level = v.obj("s $0-level", 150, 840)
     s_timb = v.obj("s $0-timbre", 280, 840)
-    s_sw = v.obj("s $0-sw", 410, 840)
 
     # --- note on
     on_t = v.obj("t b f b", 80, 180)
@@ -80,8 +79,15 @@ def build(out_dir):
     actf = v.obj("f 0", 410, 780)
     v.c(act1, 0, actf, 0)
     v.c(swoff, 0, actf, 0)
-    v.c(actf, 0, s_sw, 0)
-
+    actv = v.obj("f 0", 410, 805)
+    v.c(actf, 0, actv, 0)
+    # each slot runs while the voice sounds AND the slot is in use (engslA / engslB, set by the engine manager)
+    swt = v.obj("t f f", 410, 830)
+    v.c(actv, 0, swt, 0)
+    v.c(v.obj("r eng-slupd", 500, 805), 0, actv, 0)
+    to_ = lambda src, txt, x, y, o=0: (lambda n: (v.c(src, o, n, 0), n)[1])(v.obj(txt, x, y))
+    to_(to_(swt, "expr $f1 && engslA", 410, 855, 1), "s $0-swA", 410, 880)
+    to_(to_(swt, "expr $f1 && engslB", 530, 855, 0), "s $0-swB", 530, 880)
     # --- bend updates
     rb = v.obj("r eng-bend", 450, 50)
     bf = v.obj("expr ($f1 == $f2) || ($f1 == 17 * int($f2 / 17) + 1)", 450, 75)
@@ -127,35 +133,84 @@ def build(out_dir):
         v.c(g, 0, brx, 5)
         v.c(g, 0, tbx, 3)
 
-    # --- dynamic engine slot
-    rl = v.obj("r eng-load", 700, 500)
-    lt = v.obj("t b b s", 700, 525)
-    v.c(rl, 0, lt, 0)
-    idf = v.obj("f $0", 700, 550)
-    v.c(lt, 1, idf, 0)
-    pk = v.obj("pack f s", 700, 575)
-    v.c(lt, 2, pk, 1)
-    v.c(lt, 0, actf, 0)  # after loading: tell the new engine whether this voice is sounding
-    v.c(idf, 0, pk, 0)
-    S = "pd-$1-slot"
-    build_msg = "; ".join([
-        f"{S} clear",
-        f"{S} obj 10 10 r $1-pitch",
-        f"{S} obj 110 10 r $1-level",
-        f"{S} obj 210 10 r $1-timbre",
-        f"{S} obj 10 60 $2",
-        f"{S} obj 10 110 throw~ $1-out",
-        f"{S} obj 310 10 r $1-sw",
-        f"{S} obj 310 40 switch~",
-        f"{S} connect 0 0 3 0",
-        f"{S} connect 1 0 3 1",
-        f"{S} connect 2 0 3 2",
-        f"{S} connect 3 0 4 0",
-        f"{S} connect 5 0 6 0",
-    ])
-    bm = v.msg("; " + build_msg, 700, 600)
-    v.c(pk, 0, bm, 0)
-    slot = Canvas("$0-slot", w=500, h=200)
-    v.sub(slot, 700, 700)
-    v.c(v.obj("catch~ $0-out", 20, 870), 0, v.obj("outlet~", 20, 895), 0)
+    # --- remember the current note state, to hand it to an engine that is morphing in
+    lastp = v.obj("f", 900, 600)
+    v.c(v.obj("r $0-pitch", 900, 550), 0, v.obj("list split 1", 900, 575), 0)
+    v.c(len(v.items) - 1, 0, lastp, 1)
+    lastl = v.obj("f", 1000, 600)
+    v.c(v.obj("r $0-level", 1000, 550), 0, v.obj("list split 1", 1000, 575), 0)
+    v.c(len(v.items) - 1, 0, lastl, 1)
+    lastt = v.obj("f 0.5", 1100, 600)
+    v.c(v.obj("r $0-timbre", 1100, 550), 0, v.obj("list split 1", 1100, 575), 0)
+    v.c(len(v.items) - 1, 0, lastt, 1)
+
+    # --- two engine slots (A, B) so one engine can morph into another: "eng-load A engines/NAME"
+    rl = v.obj("r eng-load", 700, 450)
+    rr = v.obj("route A B", 700, 475)
+    v.c(rl, 0, rr, 0)
+    for i, X in enumerate("AB"):
+        x = 700 + i * 300
+        lt = v.obj("t b b b s", x, 500)
+        v.c(rr, i, lt, 0)
+        idf = v.obj("f $0", x, 525)
+        v.c(lt, 2, idf, 0)
+        pk = v.obj("pack f s", x, 550)
+        v.c(lt, 3, pk, 1)
+        v.c(idf, 0, pk, 0)
+        S = f"pd-$1-slot{X}"
+        build_msg = "; ".join([
+            f"{S} clear",
+            f"{S} obj 10 10 r $1-pitch",
+            f"{S} obj 110 10 r $1-level",
+            f"{S} obj 210 10 r $1-timbre",
+            f"{S} obj 10 60 $2 eng-{X}",
+            f"{S} obj 10 110 throw~ $1-out{X}",
+            f"{S} obj 310 10 r $1-sw{X}",
+            f"{S} obj 310 40 switch~",
+            f"{S} obj 10 35 r $1-pitch{X}",
+            f"{S} obj 110 35 r $1-level{X}",
+            f"{S} obj 210 35 r $1-timbre{X}",
+            f"{S} connect 0 0 3 0",
+            f"{S} connect 1 0 3 1",
+            f"{S} connect 2 0 3 2",
+            f"{S} connect 3 0 4 0",
+            f"{S} connect 5 0 6 0",
+            f"{S} connect 7 0 3 0",
+            f"{S} connect 8 0 3 1",
+            f"{S} connect 9 0 3 2",
+        ])
+        v.c(pk, 0, v.msg("; " + build_msg, x, 575), 0)
+        # after building: switch state, then (if this voice is sounding) the current note, as a new note
+        v.c(lt, 1, actv, 0)
+        play = v.obj("spigot", x, 625)
+        v.c(actf, 0, play, 1)
+        v.c(lt, 0, play, 0)
+        rp = v.obj("t b b b", x, 650)
+        v.c(play, 0, rp, 0)
+        v.c(rp, 2, lastt, 0)
+        v.c(rp, 1, lastp, 0)
+        v.c(rp, 0, lastl, 0)
+        for src, nm, fmt, xx in ((lastt, "timbre", "$1 0", 0), (lastp, "pitch", "$1 0", 90), (lastl, "level", "$1 40", 180)):
+            m = v.msg(fmt, x + xx, 700)
+            v.c(src, 0, m, 0)
+            v.c(m, 0, v.obj(f"s $0-{nm}{X}", x + xx, 725), 0)
+        v.sub(Canvas(f"$0-slot{X}", w=500, h=200), x, 760)
+    # --- output: equal-power crossfade between the slots ([r~ eng-xf~] 0 = A, 1 = B)
+    xf = v.obj("r~ eng-xf~", 200, 870)
+    ga = v.obj("cos~", 200, 920)
+    v.c(v.obj("*~ 0.25", 200, 895), 0, ga, 0)
+    v.c(xf, 0, len(v.items) - 3 + 1 if False else v.items.index(("obj", (200, 895, "*~ 0.25"))), 0)
+    gb_in = v.obj("expr~ ($v1 - 1) * 0.25", 300, 895)
+    v.c(xf, 0, gb_in, 0)
+    gb = v.obj("cos~", 300, 920)
+    v.c(gb_in, 0, gb, 0)
+    oa, ob = v.obj("*~", 20, 945), v.obj("*~", 120, 945)
+    v.c(v.obj("catch~ $0-outA", 20, 870), 0, oa, 0)
+    v.c(v.obj("catch~ $0-outB", 120, 870), 0, ob, 0)
+    v.c(ga, 0, oa, 1)
+    v.c(gb, 0, ob, 1)
+    osum = v.obj("+~", 20, 970)
+    v.c(oa, 0, osum, 0)
+    v.c(ob, 0, osum, 1)
+    v.c(osum, 0, v.obj("outlet~", 20, 995), 0)
     v.save(os.path.join(out_dir, "voice.pd"))

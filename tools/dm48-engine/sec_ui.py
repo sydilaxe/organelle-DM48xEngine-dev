@@ -361,12 +361,13 @@ def settings():
     s.c(pdc, 0, dest, 0)
     # load: [s $0-loadsettings] bang; missing file -> defaults
     lt = chain(s, s.obj("r $0-loadsettings", 20, 380), ["t b b"], 20, 405)
-    dmsg = msg_to(s, lt, " ".join(str(d) for d in DEFAULTS) + " velvet", 120, 430, outlet=1)
+    dmsg = s.msg(" ".join(str(d) for d in DEFAULTS) + " velvet", 120, 455)   # only when there is no settings file
     rd = msg_to(s, lt, "read settings.txt, rewind, bang", 20, 430)
     s.c(rd, 0, tf, 0)
     lu = s.obj("unpack " + " ".join(["0"] * n) + " s", 20, 480)
     s.c(dmsg, 0, lu, 0)
     s.c(tf, 0, lu, 0)
+    s.c(tf, 1, dmsg, 0)
     for i, nm in enumerate(SAVED):
         to(s, lu, f"s $0-{nm}", 20 + i * 70, 505 + (i % 2) * 22, outlet=i)
     to(s, lu, "s $0-engsel-name", 20 + n * 70, 505, outlet=n)

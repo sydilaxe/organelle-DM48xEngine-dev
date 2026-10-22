@@ -37,6 +37,7 @@ SCREEN
  Rows 1-4 (PLAY style): knob number, value bar, name and value. Line 5: page + looper.
 
 ENGINES (engines/ folder; add your own - see engines/README.txt)
+ Switching engines while playing MORPHS (crossfade, held notes carry over). Hold low A + knob = morph time.
  volt   raw/electric      Fold Grit Detune Tone
  halo   ethereal/resonant Shimmer Resonance Air Bloom
  under  bass/subharmonic  Subs Drive Tone Octave

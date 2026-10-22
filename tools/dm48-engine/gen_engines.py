@@ -15,7 +15,10 @@ Inlets (left to right) - each receives "value ms" pairs, ready for [line~]:
 Outlet: one [outlet~], mono.
 
 Shared values you can read anywhere in the engine:
-  [r~ eng-p1~] .. [r~ eng-p4~]  the 4 PLAY knobs, 0..1, smoothed   ([r eng-p1] .. control rate)
+  [r~ $1-p1~] .. [r~ $1-p4~]    the 4 PLAY knobs, 0..1, smoothed   ([r $1-p1] .. control rate)
+                 $1 is the slot name the host gives the engine (eng-A or eng-B): two engines can
+                 run at once while one morphs into the other, each with its own knob values.
+                 (Older engines that read [r~ eng-p1~] still work; they follow the current engine.)
   [r~ eng-bamt~]  SHAPE Breath>Tone, 0..1: scale your breath-to-timbre effects by this
   [r~ eng-body~]  SHAPE Body, 0..1: suggested sub / fundamental level
   [r~ eng-vib]    vibrato in semitones - add it to the pitch
@@ -109,7 +112,7 @@ def volt(path):
     e, pl, env, tb = frame("Volt - raw and electric. Two saws, a wavefolder, sample-rate grit, a filter. "
                            "Breath: more folding, more grit, brighter, strains sharp.")
     p1, p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
-                            enumerate(("eng-p1~", "eng-p2~", "eng-p3~", "eng-p4~", "eng-bamt~")))
+                            enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
     eb = mul(e, env, bamt, 650, 80)                     # breath x Breath>Tone
     strain = chain(e, eb, ["*~ 0.08"], 650, 105)        # up to +8 cents
     f = pitch_to_freq(e, pl, strain, 20, 80)
@@ -148,7 +151,7 @@ def halo(path):
     e, pl, env, tb = frame("Halo - ethereal and resonant. Sine partials bloom open with breath; breath noise "
                            "rings tuned resonators. Breath: upper partials, air, shimmer, resonator brightness.")
     p1, p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
-                            enumerate(("eng-p1~", "eng-p2~", "eng-p3~", "eng-p4~", "eng-bamt~")))
+                            enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
     es = chain(e, env, ["lop~ 4"], 300, 80)             # slow, soft swell
     eb = mul(e, es, bamt, 650, 80)
     f = pitch_to_freq(e, pl, None, 20, 80)
@@ -175,7 +178,7 @@ def halo(path):
     nz = e.obj("noise~", 600, 330)
     air = ex(e, "$v1 * (0.15 + $v2 * 0.85)", [p3, eb], 700, 330)
     ng = mul(e, nz, air, 600, 360)
-    q = chain(e, e.obj("r eng-p2", 850, 330), ["expr 3 + $f1 * $f1 * 45"], 850, 355)
+    q = chain(e, e.obj("r $1-p2", 850, 330), ["expr 3 + $f1 * $f1 * 45"], 850, 355)
     rs = []
     for k, x in ((2, 600), (3.01, 750)):
         cf = ex(e, f"min(7000, $v1 * {k} * (1 + $v2 * 0.02 + ($v3 - 0.5) * 0.1))", [f, eb, tb], x, 400)
@@ -199,10 +202,10 @@ def under(path):
     e, pl, env, tb = frame("Under - bass and subharmonics. A tone plus subharmonics f/2 f/3 f/4, saturated, "
                            "low-passed. Breath: lower subs fade in, more drive, filter opens.")
     p1, p2, p3, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
-                        enumerate(("eng-p1~", "eng-p2~", "eng-p3~", "eng-bamt~")))
+                        enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "eng-bamt~")))
     eb = mul(e, env, bamt, 650, 80)
     f0 = pitch_to_freq(e, pl, None, 20, 80)
-    octm = chain(e, e.obj("r eng-p4", 300, 130), ["expr pow(0.5, int(min($f1, 0.999) * 3))"], 300, 155)
+    octm = chain(e, e.obj("r $1-p4", 300, 130), ["expr pow(0.5, int(min($f1, 0.999) * 3))"], 300, 155)
     f = e.obj("*~ 1", 20, 180)
     e.c(f0, 0, f, 0)
     e.c(octm, 0, f, 1)
@@ -234,8 +237,8 @@ def velvet(path):
     e, pl, env, tb = frame("Velvet - lush virtual-analog pad. Three detuned saws, a warm 4-pole filter, slow swell. "
                            "Breath: filter opens, detune widens, warmth and slow drift deepen.")
     p1, p2, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
-                        enumerate(("eng-p1~", "eng-p2~", "eng-p4~", "eng-bamt~")))
-    sw = chain(e, e.obj("r eng-p3", 300, 80), ["expr 20 - $f1 * 19.7"], 300, 105)
+                        enumerate(("$1-p1~", "$1-p2~", "$1-p4~", "eng-bamt~")))
+    sw = chain(e, e.obj("r $1-p3", 300, 80), ["expr 20 - $f1 * 19.7"], 300, 105)
     es = e.obj("lop~ 10", 300, 140)
     e.c(env, 0, es, 0)
     e.c(sw, 0, es, 1)
@@ -297,7 +300,7 @@ def steel(path):
     tb = e.obj("line~", 500, 55)
     e.c(it, 0, tb, 0)
     p1, p2, p3, p4, bamt = (e.obj(f"r~ {n}", 650 + i * 90, 30) for i, n in
-                            enumerate(("eng-p1~", "eng-p2~", "eng-p3~", "eng-p4~", "eng-bamt~")))
+                            enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
     eb = mul(e, env, bamt, 650, 80)
     f = chain(e, add(e, pl, e.obj("r~ eng-vib", 100, 105), 20, 130), ["mtof~", "clip~ 30 2700"], 20, 155)
     per = ex(e, "1000 / $v1", [f], 20, 205)          # period, ms
@@ -362,7 +365,7 @@ def steel(path):
     sat = softclip(e, chain(e, amp, ["hip~ 40"], 20, 570), 20, 600)
     body = mul(e, chain(e, f, ["*~ 0.5", "osc~"], 400, 600), mul(e, r(e, "eng-body~", 500, 600), env, 500, 625), 400, 650)
     mix = add(e, sat, chain(e, body, ["*~ 0.4"], 400, 675), 20, 720)
-    e.c(chain(e, mix, ["*~ 2.2"], 20, 745), 0, e.obj("outlet~", 20, 790), 0)
+    e.c(chain(e, mix, ["*~ 3.3"], 20, 745), 0, e.obj("outlet~", 20, 790), 0)
     e.save(path)
 
 
@@ -371,7 +374,7 @@ def lyra(path):
     e, pl, env, tb = frame("Lyra - after LIRA-8 (Miguel Moreno). Two triangle oscillators modulate each other. "
                            "Breath: deeper cross-mod, sharper waves, wider beating, more drive. Knobs: Mod, Sharp, Detune, Drive")
     p1, p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
-                            enumerate(("eng-p1~", "eng-p2~", "eng-p3~", "eng-p4~", "eng-bamt~")))
+                            enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
     es = chain(e, env, ["lop~ 6"], 300, 80)            # Lyra-like soft swell
     eb = mul(e, es, bamt, 650, 80)
     # slow random drift per voice (the original's vibrato source)
@@ -399,7 +402,7 @@ def lyra(path):
     out = chain(e, mul(e, sat, nrm, 20, 680), ["hip~ 25"], 20, 705)
     body = mul(e, chain(e, f, ["*~ 0.5", "osc~"], 400, 650), r(e, "eng-body~", 500, 650), 400, 700)
     mix2 = add(e, out, body, 20, 735)
-    finish(e, mix2, es, 0.55, 20, 765, path)
+    finish(e, mix2, es, 0.73, 20, 765, path)
 
 
 def bsaw(path):

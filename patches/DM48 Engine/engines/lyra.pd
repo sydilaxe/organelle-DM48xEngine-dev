@@ -6,10 +6,10 @@
 #X obj 20 55 line~;
 #X obj 300 55 line~;
 #X obj 500 55 line~;
-#X obj 650 30 r~ eng-p1~;
-#X obj 740 30 r~ eng-p2~;
-#X obj 830 30 r~ eng-p3~;
-#X obj 920 30 r~ eng-p4~;
+#X obj 650 30 r~ \$1-p1~;
+#X obj 740 30 r~ \$1-p2~;
+#X obj 830 30 r~ \$1-p3~;
+#X obj 920 30 r~ \$1-p4~;
 #X obj 1010 30 r~ eng-bamt~;
 #X obj 300 80 lop~ 6;
 #X obj 650 80 *~;
@@ -56,7 +56,7 @@
 #X obj 400 700 *~;
 #X obj 20 735 +~;
 #X obj 20 765 *~;
-#X obj 20 790 *~ 0.55;
+#X obj 20 790 *~ 0.73;
 #X obj 20 840 outlet~;
 #X connect 1 0 4 0;
 #X connect 2 0 5 0;

@@ -173,14 +173,14 @@ def combos():
     cb.comment("Hold + turn any knob. B: loop speed (centre normal, left reverse faster, right forward faster)", 20, 5)
     cb.comment("C: reverb size  C#: throw feedback  E: reverb amount  F: tempo 40-200 BPM  F#: arp rate / pattern / octaves (knobs 1-3)", 20, 22)
     cu = chain(cb, cb.obj("r $0-combo", 20, 50), ["unpack 0 0"], 20, 75)
-    vals = [cb.obj("f", 20 + i * 220, 200) for i in range(6)]
+    vals = [cb.obj("f", 20 + i * 220, 200) for i in range(7)]
     for v_ in vals:
         cb.c(cu, 1, v_, 1)                    # value first (unpack: right outlet fires first)
     ct = to(cb, cu, "t b f", 300, 100)        # then the knob number
     to(cb, ct, "v engcombok", 400, 125, outlet=1)
     tb = to(cb, ct, "t b b", 300, 125)        # then: mark moved, dispatch on the held key
     setv(cb, tb, "engmoved", 1, 400, 150, outlet=1)
-    rt = chain(cb, tb, ["v engheld", "sel 71 72 73 76 77 78"], 300, 150)
+    rt = chain(cb, tb, ["v engheld", "sel 71 72 73 76 77 78 69"], 300, 150)
     for i, v_ in enumerate(vals):
         cb.c(rt, i, v_, 0)
     # B: speed
@@ -219,6 +219,11 @@ def combos():
     po = chain(cb, akr, ["expr 1 + int(min($f1, 0.999) * 3)", "change", "t f f"], 1800, 300, outlet=2)
     to(cb, po, "v engarpoct", 1880, 350, outlet=1)
     to(cb, msg_to(cb, po, "list Arp octaves $1", 1800, 350), "s $0-toast", 1800, 375)
+    # A (ENGINE page key): morph time 0.05 .. 8 s
+    mt = chain(cb, vals[6], ["expr int(50 + $f1 * $f1 * 7950)", "t f f"], 1300, 225)
+    to(cb, mt, "v engmorphms", 1400, 250, outlet=1)
+    to(cb, msg_to(cb, to(cb, mt, "expr int($f1 / 100) / 10", 1300, 250), "list Morph time $1 s", 1300, 275),
+       "s $0-toast", 1300, 300)
     # F: tempo
     to(cb, to(cb, vals[4], "expr 60000 / (40 + int($f1 * 160))", 900, 225), "s eng-dtime-ms", 900, 250)
     return cb

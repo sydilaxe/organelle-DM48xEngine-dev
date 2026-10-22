@@ -224,7 +224,8 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>C♯ (throw)</td><td>any knob</td><td>Throw feedback (how long the throw rings; above 100 it slowly grows)</td></tr>
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
-<tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr></table>
+<tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
+<tr><td>A (low, ENGINE)</td><td>any knob</td><td><b>Morph time</b> 0.05–8 s (default 1.5 s)</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
 
 <h2 class="pb">4. The screen</h2>
@@ -271,7 +272,13 @@ on a C harp the draw chord G-B-D-F becomes the pure 4:5:6:7 chord).</p>
 <div class="grid">{shot("page_fx", "FX")}{shot("tune_family", "TUNE: family, scale, key")}{shot("engine_monitor", "ENGINE: line 4 shows incoming MIDI")}{shot("page_library", "LIBRARY")}</div>
 
 <h2 class="pb">6. Engines</h2>
-<p>An engine is one voice; the patch runs eight. All six bundled engines react to breath in several small ways at once.</p>
+<p>An engine is one voice; the patch runs eight. All six bundled engines react to breath in several small ways at once,
+and they are level-matched, so switching doesn't jump in volume.</p>
+<p><b>Morphing.</b> Change the engine while you play and the sound morphs instead of cutting: the new engine starts in a second
+slot of every voice, takes over the notes you are holding (with their bends and breath), and the two crossfade over the
+<b>morph time</b> (hold low A + turn a knob; 1.5 s by default). Each engine keeps its own knob values during the morph.
+When it is done the old engine switches off and costs nothing. Turning the engine knob quickly through several engines gives one
+morph to where the knob stops; a choice made during a morph follows when it ends. Steel plucks its string when it morphs in.</p>
 <table><tr><th>Engine</th><th>Character</th><th>Knobs</th><th>What breath does</th></tr>
 <tr><td><b>Volt</b></td><td>raw, electric</td><td>Fold · Grit · Detune · Tone</td><td>More wave-folding, more sample-rate grit, a brighter filter and a slight upward strain of pitch.</td></tr>
 <tr><td><b>Halo</b></td><td>ethereal, resonant</td><td>Shimmer · Resonance · Air · Bloom</td><td>Upper partials bloom in (Bloom sets how fast), breath noise rings two tuned resonators, which brighten.</td></tr>
@@ -354,7 +361,8 @@ inlet 2         level   "level ms"  0..1 breath/velocity, already curved; 0 with
 inlet 3         timbre  "value ms"  0..1, 0.5 = neutral (CC 74)
 outlet~         mono audio
 
-Shared:  [r~ eng-p1~] .. [r~ eng-p4~]  PLAY knobs (0..1, smoothed)   [r eng-p1] .. control rate
+Shared:  [r~ $1-p1~] .. [r~ $1-p4~]  PLAY knobs (0..1, smoothed)   [r $1-p1] .. control rate
+         ($1 = the slot name the host passes, eng-A or eng-B, so two engines can morph with their own knobs)
          [r~ eng-bamt~]  Breath&gt;Tone    [r~ eng-body~]  Body    [r~ eng-vib]  vibrato (semitones)
          [r~ eng-sawk]   for lib/bsaw (band-limited saw)
 
@@ -396,7 +404,7 @@ input — not yet on an Organelle with a DM48X. Sounds, levels and CPU will need
 </body></html>"""
 
 open("manual.html", "w").write(html)
-subprocess.run([os.environ.get("CHROME", "/opt/pw-browsers/chromium"), "--headless", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
+subprocess.run(["/opt/pw-browsers/chromium", "--headless", "--no-sandbox", "--disable-gpu", "--no-pdf-header-footer",
                 f"--print-to-pdf={OUT_PDF}", "file://" + os.path.abspath("manual.html")], check=True,
                capture_output=True)
 print("wrote", OUT_PDF)
