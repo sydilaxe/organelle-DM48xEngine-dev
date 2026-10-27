@@ -18,9 +18,22 @@ def engine_manager():
                                                                       "list split 1", "file splitname"], 20, 155)
     nm = to(e, gl, "list split 1", 20, 280)
     to(e, nm, "text insert englist 1e+06", 20, 330, outlet=1)
-    ss = to(e, st, "t b b", 300, 80)
-    msg_to(e, ss, "; englist sort", 380, 105, outlet=1)
-    to(e, to(e, ss, "text size englist", 300, 105), "v engcount", 300, 130)
+    ss = to(e, st, "t b b b", 300, 80)
+    msg_to(e, ss, "; englist sort", 380, 105, outlet=2)
+    to(e, to(e, ss, "text size englist", 300, 105, outlet=1), "v engcount", 300, 130)
+    # create every engine once in every voice (switched off until selected): "eng-add index engines/NAME"
+    bt = to(e, ss, "t b b b", 450, 130, outlet=0)
+    to(e, bt, "s eng-clear", 550, 155, outlet=2)
+    bc = e.obj("f", 450, 205)
+    e.c(msg_to(e, bt, "0", 500, 155, outlet=1), 0, bc, 1)
+    e.c(to(e, to(e, bt, "expr engcount", 450, 155, outlet=0), "until", 450, 180), 0, bc, 0)
+    e.c(to(e, bc, "+ 1", 500, 230), 0, bc, 1)
+    bct = to(e, bc, "t f f", 450, 230)
+    bpk = e.obj("pack 0 s", 450, 280)
+    nm_ = msg_to(e, to(e, bct, "text get englist", 520, 255, outlet=1), "symbol engines/$1", 520, 280)
+    e.c(nm_, 0, bpk, 1)                       # the name first (cold) ...
+    e.c(bct, 0, bpk, 0)                       # ... then the index
+    to(e, bpk, "s eng-add", 450, 305)
     # ---- knob 1 on the ENGINE page picks an engine (shown at once, loaded when the knob rests)
     kx = chain(e, e.obj("r $0-k1p5", 600, 30),
                ["expr if(engcount > 0, min(int($f1 * engcount), engcount - 1), 0)", "change -1", "text get englist"],
@@ -34,49 +47,14 @@ def engine_manager():
     e.c(kdl, 0, kd, 0)
     to(e, kd, "s $0-engsel-name", 600, 210)
     # ---- select by name (settings or knob); unknown names fall back to the first engine.
-    # Switching while an engine sounds MORPHS: the new engine loads into the free slot (A/B) of every voice,
-    # takes over the current notes, and the two crossfade over the morph time. A choice made during a morph waits.
+    # The engines all exist already: the old one fades out (15 ms), then the knob values change and the new one fades in.
     sn = chain(e, e.obj("r $0-engsel-name", 20, 380), ["t s s"], 20, 405)
     tse = to(e, sn, "text search englist", 120, 430, outlet=1)
-    idx = chain(e, tse, ["max 0", "t b f"], 120, 455)
-    to(e, idx, "v engpend", 200, 480, outlet=1)
-    gb = chain(e, idx, ["expr if(engmorph, 1, engloaded && (engpend == engsel))", "sel 0"], 120, 480)
-    go = to(e, gb, "t b b b b", 120, 530)
-    to(e, to(e, go, "expr engpend", 400, 555, outlet=3), "v engsel", 400, 580)
-    nb = chain(e, go, ["expr if(engloaded, 1 - engbus, 0)", "t f f"], 300, 555, outlet=2)
-    to(e, nb, "v engbus", 380, 605, outlet=1)
-    onv = chain(e, nb, ["sel 0 1"], 300, 605)
-    setv(e, onv, "engslA", 1, 300, 630, outlet=0)
-    setv(e, onv, "engslB", 1, 350, 630, outlet=1)
-    cn = msg_to(e, to(e, to(e, go, "expr engsel", 120, 555, outlet=1), "text get englist", 120, 580), "symbol $1", 120, 605)
-    fade = to(e, go, "expr engloaded", 20, 555)
-    fs = to(e, fade, "sel 0 1", 20, 580)
-    first = to(e, fs, "t b b", 20, 605)
-    setv(e, first, "engloaded", 1, 20, 630, outlet=1)
-    to(e, msg_to(e, to(e, first, "expr engbus", 60, 630), "$1 0", 60, 655), "s eng-xfade", 60, 680)
-    mo = to(e, fs, "t b b b", 150, 680, outlet=1)
-    setv(e, mo, "engmorph", 1, 250, 705, outlet=2)
-    mx = to(e, mo, "expr engbus; engmorphms", 150, 705, outlet=1)
-    mpk = e.obj("pack 0 0", 150, 730)
-    e.c(mx, 1, mpk, 1)
-    e.c(mx, 0, mpk, 0)
-    to(e, mpk, "s eng-xfade", 150, 755)
-    mdl = e.obj("delay", 300, 755)
-    e.c(to(e, mo, "expr engmorphms + 60", 300, 730), 0, mdl, 0)
-    # morph done: the old slot stops; a choice that waited now loads
-    dn = to(e, mdl, "t b b b", 300, 780)
-    od = chain(e, dn, ["expr engbus", "sel 0 1"], 450, 805, outlet=2)
-    setv(e, od, "engslB", 0, 450, 830, outlet=0)
-    setv(e, od, "engslA", 0, 500, 830, outlet=1)
-    to(e, dn, "s eng-slupd", 600, 830, outlet=2) if False else None
-    sl2 = to(e, od, "t b", 0, 0) if False else None
-    setv(e, dn, "engmorph", 0, 350, 830, outlet=1)
-    to(e, dn, "s eng-slupd", 600, 805, outlet=1)
-    pend = chain(e, dn, ["expr engpend != engsel", "sel 1"], 300, 855)
-    to(e, msg_to(e, to(e, to(e, pend, "expr engpend", 300, 880), "text get englist", 300, 905), "symbol $1", 300, 930),
-       "s $0-engsel-name", 300, 955)
-    # after the new slot is switched on (set above), the voices are told
-    to(e, go, "s eng-slupd", 200, 580, outlet=1)
+    idx = chain(e, tse, ["max 0", "t f f"], 120, 455)
+    to(e, idx, "v engsel", 200, 480, outlet=1)
+    to(e, idx, "s eng-esel", 280, 480, outlet=1)
+    dly = chain(e, idx, ["t b", "delay 16", "expr engsel", "text get englist"], 120, 480, outlet=0)
+    cn = msg_to(e, dly, "symbol $1", 120, 580)
     t4 = to(e, cn, "t s s s s", 120, 600)
     # 3: name for display + saving
     to(e, t4, "s $0-curname", 400, 625, outlet=3)
@@ -109,13 +87,6 @@ def engine_manager():
         to(e, vals, f"s $0-pv{k + 1}", 900 + k * 80, 875, outlet=k)
     # 0: load into the voices, then re-send the knob values to the new engine
     lt = to(e, t4, "t b s", 120, 650)
-    ltt = to(e, lt, "t s b", 200, 675, outlet=1)
-    lpk = e.obj("pack s s", 200, 725)
-    e.c(ltt, 0, lpk, 0)
-    lsel = chain(e, ltt, ["expr engbus", "sel 0 1"], 260, 700, outlet=1)
-    for i, X in enumerate("AB"):
-        e.c(msg_to(e, lsel, f"symbol {X}", 260 + i * 70, 725, outlet=i), 0, lpk, 1)
-    to(e, msg_to(e, lpk, "$2 symbol engines/$1", 200, 750), "s eng-load", 200, 775)
     to(e, lt, "s $0-refresh0", 120, 700)
     # ---- remember PLAY knob values per engine: [s $0-pstore] bang
     ps = chain(e, e.obj("r $0-pstore", 1200, 30), ["symbol", "t s s"], 1200, 55)
@@ -371,16 +342,6 @@ def audio():
     a.comment("Engine params -> signals, vibrato, then master FX: ping-pong delay, reverb (with freeze), limiter", 20, 5)
     for k in range(1, 5):
         to(a, smooth(a, f"eng-p{k}", 30, 20 + (k - 1) * 110, 30), f"s~ eng-p{k}~", 20 + (k - 1) * 110, 105)
-    # per-slot knob values: the PLAY knobs go to the slot of the current engine (engbus 0 = A, 1 = B)
-    for k in range(1, 5):
-        rk = a.obj(f"r eng-p{k}", 1300 + (k - 1) * 120, 30)
-        for i, X in enumerate("AB"):
-            g = chain(a, rk, [f"expr if(engbus == {i}, $f1, -1)", "moses 0"], 1300 + (k - 1) * 120 + i * 60, 55 + i * 50)
-            to(a, g, f"s eng-{X}-p{k}", 1300 + (k - 1) * 120 + i * 60, 105 + i * 50, outlet=1)
-            to(a, smooth(a, f"eng-{X}-p{k}", 30, 1300 + (k - 1) * 120 + i * 60, 160 + i * 100),
-               f"s~ eng-{X}-p{k}~", 1300 + (k - 1) * 120 + i * 60, 235 + i * 100)
-    xfl = chain(a, a.obj("r eng-xfade", 1800, 30), ["line~"], 1800, 55)
-    to(a, xfl, "s~ eng-xf~", 1800, 80)
     for i, nm in enumerate(("bamt", "body")):
         to(a, smooth(a, f"eng-{nm}", 30, 480 + i * 110, 30), f"s~ eng-{nm}~", 480 + i * 110, 105)
     srs = chain(a, a.obj("loadbang", 720, 30), ["samplerate~", "/ 2.5", "sig~"], 720, 55)
@@ -515,6 +476,12 @@ def audio():
         y3 = mul(a, y2, yc, x + 80, 1275)
         y3s = to(a, y3, "*~ -0.148148", x + 80, 1300)
         to(a, add(a, yc, y3s, x, 1325), f"throw~ out{s_}", x, 1350)
+    # panic: empty every delay line (delay, reverb, diffusers)
+    pr = a.obj("r eng-panic", 1700, 1300)
+    cm = msg_to(a, pr, "clear", 1700, 1325)
+    for i, (kind, p) in enumerate(list(a.items)):
+        if kind == "obj" and p[2].startswith("delwrite~"):
+            a.c(cm, 0, i, 0)
     return a
 
 

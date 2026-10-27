@@ -12,6 +12,7 @@ least one whole pass (after the overdub ends it keeps writing silence until the 
 leftovers from an earlier, undone take.
 States (engastate): 0 empty, 1 armed (waits for the MIDI loop start), 2 REC, 3 PLAY, 4 DUB, 5 STOP.
 """
+import os
 from pdgen import Canvas
 from sec_core import chain, to, msg_to, setv
 
@@ -78,6 +79,8 @@ def dsp():
     chain(a, a.obj("r $0-adsp", 1800, 10), ["switch~"], 1800, 35)
     post = smooth_msg(a, "eng-apost", 30, 20, 30)
     dry = a.obj("r~ eng-tap-pre", 150, 30)
+    if os.environ.get("DBG_ALOOP"):                      # debug: record a sample counter instead of sound
+        dry = chain(a, a.obj("sig~ 1", 150, 30), ["rpole~ 1"], 150, 30)
     pL, pR = a.obj("r~ eng-tap-postL", 270, 30), a.obj("r~ eng-tap-postR", 400, 30)
     ins = []
     for p, x in ((pL, 150), (pR, 330)):
@@ -163,8 +166,9 @@ def dsp():
     gate = smooth_msg(a, "$0-agatesig", 8, 1100, 800)
     ksig = chain(a, a.obj("r $0-aksig", 1250, 800), ["sig~"], 1250, 825)
     for side, src, x in (("L", inL, 20), ("R", inR, 500)):
-        rd = a.obj(f"tabread4~ enga{side}0", x + 200, 880)
-        a.c(widx2, 0, rd, 0)
+        # the layer's old sample at exactly the write position (rounded, no interpolation: an interpolating read
+        # would blend in the neighbour the writer has just overwritten)
+        rd = to(a, to(a, widx2, "+~ 0.5", x + 200, 860), f"tabread~ enga{side}0", x + 200, 880)
         a.c(a.obj(f"r $0-awset{side}", x + 200, 855), 0, rd, 0)
         wr = a.obj("expr~ $v1 * $v2 + $v3 * $v4", x, 920)
         a.c(src, 0, wr, 0)
@@ -195,7 +199,7 @@ def control():
     lbt = chain(a, a.obj("loadbang", 20, 30), ["t b b b"], 20, 55)
     sr = chain(a, lbt, ["samplerate~", "t f f"], 20, 80, outlet=2)
     to(a, sr, "v engasr", 120, 105, outlet=1)
-    to(a, to(a, sr, f"expr min({MAXA}, $f1 * {MAXSEC}) / $f1 * 1000", 20, 105), "v engamaxms", 20, 130)
+    to(a, to(a, sr, f"expr min({MAXA - 2048}, $f1 * {MAXSEC}) / $f1 * 1000", 20, 105), "v engamaxms", 20, 130)
     for i, (nm, v) in enumerate((("engaspd", 1), ("engafb", 1), ("engalvl", 0.8), ("engapost", 0), ("engapitch", 0),
                                  ("engview", 0))):
         setv(a, lbt, nm, v, 250 + i * 60, 80, outlet=1)
@@ -273,52 +277,77 @@ def control():
     msg_to(a, zt, "; engaL$1 const 0; engaR$1 const 0", 1700, 400, outlet=1)
     tabset(a, zt, "$f1; 0", "engadirty", 1850, 400, outlet=0)
 
-    # ---------- loop wrap: playhead to the start, writer to the start, fade older layers, schedule the next
-    wr = chain(a, a.obj("r $0-awrap", 20, 450), ["t b b"], 20, 475)
-    wtm = a.obj("timer", 120, 525)               # two wraps within 20 ms (own clock + MIDI loop) count once
-    a.c(wr, 0, wtm, 1)
-    wok = chain(a, wtm, ["moses 20"], 120, 550)
-    wgo = a.obj("t b b b b", 20, 600)
-    a.c(wok, 1, wgo, 0)
-    a.c(wgo, 3, wtm, 0)
-    send(a, wgo, "0", "$0-aphase", 20, 625, outlet=3)
-    wsel = chain(a, wgo, ["expr (engastate == 4) || engatail", "sel 1"], 150, 625, outlet=2)
-    send(a, wsel, "start 0", "$0-awcmd", 150, 675)
+    # ---------- loop clock. The playhead (phasor~) runs freely; it is only reset when playback (re)starts.
+    # The clock ticks ~3 ms after each wrap: the writer carries on across the loop seam (the few samples it wrote
+    # past the end are copied to the start), older layers fade, and the next tick is scheduled from the real phase.
+    nx = a.obj("delay", 600, 700)
+    to(a, nx, "s $0-atick", 600, 725)
+    a.c(msg_to(a, a.obj("r $0-awstop", 700, 675), "stop", 700, 700), 0, nx, 0)
+    # start playback from the loop start: [s $0-aplay]
+    ap = chain(a, a.obj("r $0-aplay", 20, 450), ["t b b"], 20, 475)
+    send(a, ap, "0", "$0-aphase", 100, 500, outlet=1)
+    a.c(chain(a, ap, ["expr if(engalen > 0, engalenms / max(0.05, abs(engaspd)) + 3, -1)", "moses 0"], 20, 500), 1, nx, 0)
+    # schedule the next tick from the current phase: [s $0-anext]
+    an = chain(a, a.obj("r $0-anext", 300, 450), ["t b b"], 300, 475)
+    to(a, an, "s $0-asnap", 380, 500, outlet=1)
+    a.c(chain(a, an, ["expr if((engalen > 0) && ((engastate == 3) || (engastate == 4)), "
+                      "if(engaspd > 0, 1 - engaph, engaph) * engalenms / max(0.05, abs(engaspd)) + 3, -1)", "moses 0"],
+              300, 500), 1, nx, 0)
+    # tick
+    tk = chain(a, a.obj("r $0-atick", 20, 560), ["t b b b b"], 20, 585)
+    to(a, tk, "s $0-asnap", 20, 610, outlet=3)
+    wsel = chain(a, tk, ["expr (engastate == 4) || engatail", "sel 1"], 150, 610, outlet=2)
+    to(a, wsel, "s $0-aseam", 150, 660)
     # fade: every on layer except the one being written loses (1 - fade)
-    fg = chain(a, wgo, ["expr engafb < 0.999", "sel 1"], 350, 625, outlet=1)
-    fu = to(a, msg_to(a, fg, str(NL), 350, 675), "until", 350, 700)
-    fz = msg_to(a, fg, "0", 450, 675)
-    fcn = a.obj("f", 350, 725)
+    fg = chain(a, tk, ["expr engafb < 0.999", "sel 1"], 350, 610, outlet=1)
+    fu = to(a, msg_to(a, fg, str(NL), 350, 660), "until", 350, 685)
+    fz = msg_to(a, fg, "0", 450, 660)
+    fcn = a.obj("f", 350, 710)
     a.c(fz, 0, fcn, 1)
     a.c(fu, 0, fcn, 0)
-    a.c(to(a, fcn, "+ 1", 400, 750), 0, fcn, 1)
+    a.c(to(a, fcn, "+ 1", 400, 735), 0, fcn, 1)
     fx = to(a, fcn, "expr if(engaon[$f1] && !(($f1 == engaw) && ((engastate == 4) || engatail)), $f1, -1); "
-                    "engag[$f1] * engafb", 350, 775)
-    fpk = a.obj("pack 0 0", 350, 825)
+                    "engag[$f1] * engafb", 350, 760)
+    fpk = a.obj("pack 0 0", 350, 810)
     a.c(fx, 1, fpk, 1)
-    a.c(to(a, fx, "moses 0", 350, 800), 1, fpk, 0)
-    send(a, fpk, "$2 $1", "$0-asetgain", 350, 850)
-    # next wrap
-    nx = a.obj("delay", 600, 675)
-    a.c(chain(a, wgo, ["expr if(engalen > 0, engalenms / max(0.05, abs(engaspd)), -1)", "moses 0"], 600, 625,
-              outlet=0), 1, nx, 0)
-    to(a, nx, "s $0-awrap", 600, 700)
-    a.c(msg_to(a, a.obj("r $0-awstop", 700, 650), "stop", 700, 675), 0, nx, 0)
-    a.c(msg_to(a, a.obj("r $0-awstopnext", 800, 650), "stop", 800, 675), 0, nx, 0)
-    # a MIDI loop cycle re-aligns a synced audio loop at normal speed
-    to(a, chain(a, a.obj("r $0-cycle", 900, 450),
-                ["expr engasync && ((engastate == 3) || (engastate == 4)) && (engaspd == 1) && (englspd == 1)", "sel 1"],
-                900, 475), "s $0-awrap", 900, 525)
+    a.c(to(a, fx, "moses 0", 350, 785), 1, fpk, 0)
+    send(a, fpk, "$2 $1", "$0-asetgain", 350, 835)
+    to(a, tk, "s $0-anext", 600, 610, outlet=0)
+    # seam: copy what the writer wrote past the end (layer length lw, x samples) to the start, then write on from x
+    sm = chain(a, a.obj("r $0-aseam", 1000, 560), ["expr int(engaph * engawA + engawB + 1); int(abs(engawA))"], 1000, 585)
+    smt = to(a, sm, "t f f f", 1000, 610)
+    send(a, smt, "start $1", "$0-awcmd", 1000, 635, outlet=0)
+    cnt = a.obj("f", 1100, 685)
+    a.c(msg_to(a, smt, "0", 1150, 660, outlet=2), 0, cnt, 1)
+    a.c(to(a, to(a, smt, "clip 0 1024", 1050, 635, outlet=1), "until", 1050, 660), 0, cnt, 0)
+    a.c(to(a, cnt, "+ 1", 1150, 710), 0, cnt, 1)
+    ct = to(a, cnt, "t f f", 1100, 710)
+    for side, x in (("L", 1100), ("R", 1300)):
+        src = to(a, ct, "+ 0", x, 735, outlet=0)          # lw + i
+        a.c(sm, 1, src, 1)                                # (the layer length lw arrives first, cold)
+        rdt = to(a, src, f"tabread enga{side}0", x, 760)
+        a.c(a.obj(f"r $0-awset{side}", x + 80, 735), 0, rdt, 0)
+        wrt = a.obj(f"tabwrite enga{side}0", x, 800)
+        a.c(a.obj(f"r $0-awset{side}", x + 80, 775), 0, wrt, 0)
+        a.c(ct, 1, wrt, 1)                                # index i first
+        a.c(rdt, 0, wrt, 0)
+    # a MIDI loop cycle re-aligns a synced audio loop that has drifted (normal speed only)
+    sy = chain(a, a.obj("r $0-cycle", 900, 450),
+               ["expr engasync && ((engastate == 3) || (engastate == 4)) && (engaspd == 1) && (englspd == 1)", "sel 1"],
+               900, 475)
+    syt = to(a, sy, "t b b", 900, 500)
+    to(a, syt, "s $0-asnap", 1000, 525, outlet=1)
+    to(a, chain(a, syt, ["expr min(engaph, 1 - engaph) * engalenms > 5", "sel 1"], 900, 525), "s $0-aplay", 900, 575)
 
     # ---------- start writing a new layer at the playhead: [s $0-awbegin]
     wb = chain(a, a.obj("r $0-awbegin", 1300, 450), ["t b b b b b"], 1300, 475)
     setv(a, wb, "engak", 0, 1400, 500, outlet=4)
     send(a, wb, "0", "$0-aksig", 1450, 500, outlet=4)
     to(a, wb, "s $0-asnap", 1550, 500, outlet=3)
-    st0 = to(a, wb, "expr int(engaph * engawA + engawB + 64) % max(1, int(abs(engawA)))", 1600, 525, outlet=2)
+    st0 = to(a, wb, "expr int(engaph * engawA + engawB + 1) % max(1, int(abs(engawA)))", 1600, 525, outlet=2)
     send(a, st0, "start $1", "$0-awcmd", 1600, 550)
     p1 = a.obj("delay", 1300, 550)
-    a.c(to(a, wb, "expr engalenms / max(0.05, abs(engaspd))", 1300, 525), 0, p1, 0)
+    a.c(to(a, wb, "expr engalenms / max(0.05, abs(engaspd)) - 3", 1300, 525), 0, p1, 0)
     a.c(msg_to(a, a.obj("r $0-awcancel", 1400, 525), "stop", 1400, 550), 0, p1, 0)
     # first pass complete: from now on the layer adds to itself; a finishing tail ends here
     p1t = to(a, p1, "t b b b", 1300, 575)
@@ -423,7 +452,7 @@ def control():
     # STOP -> PLAY from the start
     s5 = to(a, st, "t b b b", 1400, 1650, outlet=5)
     setv(a, s5, "engastate", 3, 1400, 1675, outlet=2)
-    to(a, s5, "s $0-awrap", 1500, 1675, outlet=1)
+    to(a, s5, "s $0-aplay", 1500, 1675, outlet=1)
     a.c(s5, 0, stat, 0)
 
     # ---------- record the first take: [s $0-arecstart]
@@ -458,23 +487,43 @@ def control():
        "v engalenms", 20, 2225)
     to(a, to(a, re, "expr max(64, int(engalenms * engasr / 1000))", 200, 2175, outlet=6), "v engalen", 200, 2200)
     to(a, to(a, re, "expr engalen", 400, 2175, outlet=5), "s $0-alen", 400, 2200)
-    send(a, re, "stop", "$0-awcmd", 500, 2175, outlet=5)
-    send(a, re, "0", "$0-agatesig", 580, 2175, outlet=5)
+    to(a, re, "s $0-axfade", 500, 2175, outlet=5)
     send(a, re, "0", "$0-aovrun", 660, 2175, outlet=5)
     to(a, re, "s $0-arecbins", 740, 2175, outlet=4)
     setv(a, re, "engastate", 3, 840, 2175, outlet=3)
     to(a, to(a, re, "expr engalvl", 920, 2175, outlet=2), "s $0-alvlsig", 920, 2200)
     to(a, to(a, re, "expr engaspd * engasr / max(1, engalen)", 1000, 2175, outlet=2), "s $0-afreq", 1000, 2200)
-    to(a, re, "s $0-awrap", 1150, 2175, outlet=1)
+    to(a, re, "s $0-aplay", 1150, 2175, outlet=1)
     a.c(re, 0, stat, 0)
+    # seam crossfade of the first take: start[i] = start[i] * i/N + after_end[i] * (1 - i/N), N = 441 (10 ms)
+    xd = chain(a, a.obj("r $0-axfade", 1300, 2100), ["delay 12", "t b b b"], 1300, 2125)
+    send(a, xd, "stop", "$0-awcmd", 1300, 2175, outlet=2)
+    send(a, xd, "0", "$0-agatesig", 1380, 2175, outlet=2)
+    xc = a.obj("f", 1500, 2225)
+    a.c(msg_to(a, xd, "0", 1550, 2200, outlet=1), 0, xc, 1)
+    a.c(to(a, msg_to(a, xd, "441", 1500, 2175, outlet=1), "until", 1500, 2200), 0, xc, 0)
+    a.c(to(a, xc, "+ 1", 1550, 2250), 0, xc, 1)
+    for side, x in (("L", 1500), ("R", 1800)):
+        t4 = to(a, xc, "t f f f f", x, 2275)
+        wr_ = a.obj(f"tabwrite enga{side}0", x, 2400)
+        a.c(t4, 3, wr_, 1)                                       # index i
+        mix = a.obj("expr $f1 * $f2 / 441 + $f3 * (1 - $f2 / 441)", x, 2375)
+        nxt = chain(a, t4, ["expr $f1 + engalen", f"tabread enga{side}0"], x + 150, 2300, outlet=2)
+        a.c(nxt, 0, mix, 2)                                      # what was recorded after the end
+        a.c(t4, 1, mix, 1)                                       # i
+        cur = to(a, t4, f"tabread enga{side}0", x, 2325, outlet=0)
+        a.c(cur, 0, mix, 0)                                      # the start (hot)
+        a.c(mix, 0, wr_, 0)
+        for o in (cur, nxt, wr_):
+            a.c(a.obj(f"r $0-awset{side}", x + 250, 2300), 0, o, 0)
 
     # ---------- overdub start (normal speed only): [s $0-adubstart]
     ds = chain(a, a.obj("r $0-adubstart", 20, 2350), ["t b b"], 20, 2375)
-    fit = chain(a, ds, [f"expr engalen / max(0.05, abs(engaspd)) <= {MAXA}", "sel 0"], 120, 2400, outlet=1)
+    fit = chain(a, ds, [f"expr engalen / max(0.05, abs(engaspd)) <= {MAXA - 2048}", "sel 0"], 120, 2400, outlet=1)
     a.c(msg_to(a, fit, "list Audio: too slow to overdub this loop", 120, 2450), 0, toast, 0)
     dg = a.obj("spigot", 20, 2375)
     a.c(ds, 0, dg, 0)
-    a.c(to(a, ds, f"expr engalen / max(0.05, abs(engaspd)) <= {MAXA}", 250, 2350, outlet=1), 0, dg, 1)
+    a.c(to(a, ds, f"expr engalen / max(0.05, abs(engaspd)) <= {MAXA - 2048}", 250, 2350, outlet=1), 0, dg, 1)
     dt = chain(a, dg, ["expr engatail", "sel 1 0"], 20, 2400)
     # the layer's first pass is still finishing: carry on with the same layer
     sl = to(a, dt, "t b b b", 20, 2450)
@@ -570,15 +619,7 @@ def control():
     spt = to(a, spd, "t b b b", 20, 3275)
     to(a, spt, "s $0-asnap", 20, 3300, outlet=2)
     to(a, to(a, spt, "expr if(engalen > 0, engaspd * engasr / engalen, 0)", 100, 3300, outlet=1), "s $0-afreq", 100, 3325)
-    rem = chain(a, spt, ["expr if((engalen > 0) && ((engastate == 3) || (engastate == 4)), "
-                         "if(engaspd > 0, 1 - engaph, engaph) * engalenms / max(0.05, abs(engaspd)), -1)", "moses 0"],
-                300, 3300)
-    rd = a.obj("delay", 400, 3375)
-    a.c(rem, 1, rd, 0)
-    to(a, rd, "s $0-awrap", 400, 3400)
-    a.c(msg_to(a, a.obj("r $0-awstop", 500, 3350), "stop", 500, 3375), 0, rd, 0)
-    # the regular wrap clock waits for this one
-    to(a, to(a, rem, "t b", 250, 3375, outlet=1), "s $0-awstopnext", 250, 3400)
+    to(a, spt, "s $0-anext", 300, 3300, outlet=0)
     # speed back to 1 for an overdub
     # ---------- pitch (hold A + knob 2): semitones
     pt = chain(a, a.obj("r eng-aloop-pitch", 900, 3200), ["t f f f"], 900, 3225)

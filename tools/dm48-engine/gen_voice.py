@@ -75,19 +75,11 @@ def build(out_dir):
     swoff = v.msg("0", 110, 530)
     v.c(dly, 0, swoff, 0)
 
-    # active flag -> engine on/off (remembered so a newly loaded engine gets it too)
+    # active flag -> the engines in this voice ([r $0-act]: 1 while the note sounds or releases)
     actf = v.obj("f 0", 410, 780)
     v.c(act1, 0, actf, 0)
     v.c(swoff, 0, actf, 0)
-    actv = v.obj("f 0", 410, 805)
-    v.c(actf, 0, actv, 0)
-    # each slot runs while the voice sounds AND the slot is in use (engslA / engslB, set by the engine manager)
-    swt = v.obj("t f f", 410, 830)
-    v.c(actv, 0, swt, 0)
-    v.c(v.obj("r eng-slupd", 500, 805), 0, actv, 0)
-    to_ = lambda src, txt, x, y, o=0: (lambda n: (v.c(src, o, n, 0), n)[1])(v.obj(txt, x, y))
-    to_(to_(swt, "expr $f1 && engslA", 410, 855, 1), "s $0-swA", 410, 880)
-    to_(to_(swt, "expr $f1 && engslB", 530, 855, 0), "s $0-swB", 530, 880)
+    v.c(actf, 0, v.obj("s $0-act", 410, 805), 0)
     # --- bend updates
     rb = v.obj("r eng-bend", 450, 50)
     bf = v.obj("expr ($f1 == $f2) || ($f1 == 17 * int($f2 / 17) + 1)", 450, 75)
@@ -133,84 +125,97 @@ def build(out_dir):
         v.c(g, 0, brx, 5)
         v.c(g, 0, tbx, 3)
 
-    # --- remember the current note state, to hand it to an engine that is morphing in
-    lastp = v.obj("f", 900, 600)
-    v.c(v.obj("r $0-pitch", 900, 550), 0, v.obj("list split 1", 900, 575), 0)
-    v.c(len(v.items) - 1, 0, lastp, 1)
-    lastl = v.obj("f", 1000, 600)
-    v.c(v.obj("r $0-level", 1000, 550), 0, v.obj("list split 1", 1000, 575), 0)
-    v.c(len(v.items) - 1, 0, lastl, 1)
-    lastt = v.obj("f 0.5", 1100, 600)
-    v.c(v.obj("r $0-timbre", 1100, 550), 0, v.obj("list split 1", 1100, 575), 0)
-    v.c(len(v.items) - 1, 0, lastt, 1)
-
-    # --- two engine slots (A, B) so one engine can morph into another: "eng-load A engines/NAME"
-    rl = v.obj("r eng-load", 700, 450)
-    rr = v.obj("route A B", 700, 475)
-    v.c(rl, 0, rr, 0)
-    for i, X in enumerate("AB"):
-        x = 700 + i * 300
-        lt = v.obj("t b b b s", x, 500)
-        v.c(rr, i, lt, 0)
-        idf = v.obj("f $0", x, 525)
-        v.c(lt, 2, idf, 0)
-        pk = v.obj("pack f s", x, 550)
-        v.c(lt, 3, pk, 1)
-        v.c(idf, 0, pk, 0)
-        S = f"pd-$1-slot{X}"
-        build_msg = "; ".join([
-            f"{S} clear",
-            f"{S} obj 10 10 r $1-pitch",
-            f"{S} obj 110 10 r $1-level",
-            f"{S} obj 210 10 r $1-timbre",
-            f"{S} obj 10 60 $2 eng-{X}",
-            f"{S} obj 10 110 throw~ $1-out{X}",
-            f"{S} obj 310 10 r $1-sw{X}",
-            f"{S} obj 310 40 switch~",
-            f"{S} obj 10 35 r $1-pitch{X}",
-            f"{S} obj 110 35 r $1-level{X}",
-            f"{S} obj 210 35 r $1-timbre{X}",
-            f"{S} connect 0 0 3 0",
-            f"{S} connect 1 0 3 1",
-            f"{S} connect 2 0 3 2",
-            f"{S} connect 3 0 4 0",
-            f"{S} connect 5 0 6 0",
-            f"{S} connect 7 0 3 0",
-            f"{S} connect 8 0 3 1",
-            f"{S} connect 9 0 3 2",
-        ])
-        v.c(pk, 0, v.msg("; " + build_msg, x, 575), 0)
-        # after building: switch state, then (if this voice is sounding) the current note, as a new note
-        v.c(lt, 1, actv, 0)
-        play = v.obj("spigot", x, 625)
-        v.c(actf, 0, play, 1)
-        v.c(lt, 0, play, 0)
-        rp = v.obj("t b b b", x, 650)
-        v.c(play, 0, rp, 0)
-        v.c(rp, 2, lastt, 0)
-        v.c(rp, 1, lastp, 0)
-        v.c(rp, 0, lastl, 0)
-        for src, nm, fmt, xx in ((lastt, "timbre", "$1 0", 0), (lastp, "pitch", "$1 0", 90), (lastl, "level", "$1 40", 180)):
-            m = v.msg(fmt, x + xx, 700)
-            v.c(src, 0, m, 0)
-            v.c(m, 0, v.obj(f"s $0-{nm}{X}", x + xx, 725), 0)
-        v.sub(Canvas(f"$0-slot{X}", w=500, h=200), x, 760)
-    # --- output: equal-power crossfade between the slots ([r~ eng-xf~] 0 = A, 1 = B)
-    xf = v.obj("r~ eng-xf~", 200, 870)
-    ga = v.obj("cos~", 200, 920)
-    v.c(v.obj("*~ 0.25", 200, 895), 0, ga, 0)
-    v.c(xf, 0, len(v.items) - 3 + 1 if False else v.items.index(("obj", (200, 895, "*~ 0.25"))), 0)
-    gb_in = v.obj("expr~ ($v1 - 1) * 0.25", 300, 895)
-    v.c(xf, 0, gb_in, 0)
-    gb = v.obj("cos~", 300, 920)
-    v.c(gb_in, 0, gb, 0)
-    oa, ob = v.obj("*~", 20, 945), v.obj("*~", 120, 945)
-    v.c(v.obj("catch~ $0-outA", 20, 870), 0, oa, 0)
-    v.c(v.obj("catch~ $0-outB", 120, 870), 0, ob, 0)
-    v.c(ga, 0, oa, 1)
-    v.c(gb, 0, ob, 1)
-    osum = v.obj("+~", 20, 970)
-    v.c(oa, 0, osum, 0)
-    v.c(ob, 0, osum, 1)
-    v.c(osum, 0, v.obj("outlet~", 20, 995), 0)
+    # --- every engine is created once, at start-up, inside [pd $0-eng] (one [ehost] per engine).
+    # Only the selected one runs (switch~); switching fades 15 ms out, then 15 ms in - nothing is created while
+    # you play, so Pd never has to rebuild its DSP graph mid-performance.
+    rc = v.obj("r eng-clear", 700, 450)
+    idf = v.obj("f $0", 700, 475)
+    v.c(rc, 0, idf, 0)
+    v.c(idf, 0, v.msg("; pd-$1-eng clear", 700, 500), 0)
+    ra = v.obj("r eng-add", 900, 450)                       # "index engines/NAME"
+    at = v.obj("t a b", 900, 475)
+    v.c(ra, 0, at, 0)
+    idf2 = v.obj("f $0", 1000, 500)
+    v.c(at, 1, idf2, 0)
+    lp = v.obj("list prepend", 900, 525)
+    v.c(idf2, 0, lp, 1)
+    v.c(at, 0, lp, 0)
+    v.c(lp, 0, v.msg("; pd-$1-eng obj 10 10 ehost $1 $3 $2", 900, 550), 0)
+    v.sub(Canvas("$0-eng", w=500, h=300), 700, 600)
+    v.c(v.obj("catch~ $0-out", 20, 870), 0, v.obj("outlet~", 20, 895), 0)
     v.save(os.path.join(out_dir, "voice.pd"))
+
+
+def build_ehost(out_dir):
+    """ehost.pd: one engine inside a voice.  Args: voice-id, engines/NAME, index."""
+    h = Canvas(w=900, h=520)
+    h.comment("One engine in one voice. Runs (switch~) only while it is the selected engine (eng-esel) and the voice "
+              "sounds. Selected: waits 15 ms (the old engine fades out), then fades in over 15 ms.", 20, 5)
+    p, l, t = h.obj("r $1-pitch", 20, 40), h.obj("r $1-level", 120, 40), h.obj("r $1-timbre", 220, 40)
+    eng = h.obj("$2 eng", 20, 90)
+    for i, src in enumerate((p, l, t)):
+        h.c(src, 0, eng, i)
+    g = h.obj("*~", 20, 140)
+    h.c(eng, 0, g, 0)
+    gl = h.obj("line~", 120, 115)
+    h.c(gl, 0, g, 1)
+    h.c(g, 0, h.obj("throw~ $1-out", 20, 170), 0)
+    # stored state, read in order by the recompute below: act (voice sounds), sel, fading
+    a2, s2, f2 = h.obj("f 0", 400, 340), h.obj("f 0", 450, 340), h.obj("f 0", 500, 340)
+    rec = h.obj("t b b b", 400, 315)
+    ex = h.obj("expr $f1 && ($f2 || $f3)", 400, 390)
+    h.c(rec, 2, f2, 0)
+    h.c(rec, 1, s2, 0)
+    h.c(rec, 0, a2, 0)
+    h.c(f2, 0, ex, 2)
+    h.c(s2, 0, ex, 1)
+    h.c(a2, 0, ex, 0)
+    h.c(ex, 0, h.obj("switch~", 400, 415), 0)
+    # voice on/off
+    at = h.obj("t b f", 400, 65)
+    h.c(h.obj("r $1-act", 400, 40), 0, at, 0)
+    h.c(at, 1, a2, 1)
+    h.c(at, 0, rec, 0)
+    # selection
+    sx = h.obj("== $3", 550, 40)
+    h.c(h.obj("r eng-esel", 550, 15), 0, sx, 0)
+    sc = h.obj("change -1", 550, 65)
+    h.c(sx, 0, sc, 0)
+    st = h.obj("t b f f", 550, 90)
+    h.c(sc, 0, st, 0)
+    h.c(st, 2, s2, 1)
+    ss = h.obj("sel 1 0", 550, 115)
+    h.c(st, 1, ss, 0)
+    h.c(st, 0, rec, 0)
+    # selected: no fading flag, fade in after 15 ms
+    sel_t = h.obj("t b b b", 550, 140)
+    h.c(ss, 0, sel_t, 0)
+    dout = h.obj("delay 20", 750, 190)
+    stp = h.msg("stop", 650, 165)
+    h.c(sel_t, 2, stp, 0)
+    h.c(stp, 0, dout, 0)
+    z = h.msg("0", 600, 165)
+    h.c(sel_t, 1, z, 0)
+    h.c(z, 0, f2, 1)
+    din = h.obj("delay 15", 550, 190)
+    h.c(sel_t, 0, din, 0)
+    fin = h.msg("1 15", 550, 215)
+    h.c(din, 0, fin, 0)
+    h.c(fin, 0, gl, 0)
+    # deselected: fade out over 15 ms, keep running 20 ms (fading), then stop
+    des_t = h.obj("t b b", 750, 140)
+    h.c(ss, 1, des_t, 0)
+    one = h.msg("1", 800, 165)
+    h.c(des_t, 1, one, 0)
+    h.c(one, 0, f2, 1)
+    fout = h.msg("0 15", 850, 165)
+    h.c(des_t, 0, fout, 0)
+    h.c(fout, 0, gl, 0)
+    h.c(des_t, 0, dout, 0)
+    endf = h.obj("t b b", 750, 215)
+    h.c(dout, 0, endf, 0)
+    zz = h.msg("0", 800, 240)
+    h.c(endf, 1, zz, 0)
+    h.c(zz, 0, f2, 1)
+    h.c(endf, 0, rec, 0)
+    h.save(os.path.join(out_dir, "ehost.pd"))

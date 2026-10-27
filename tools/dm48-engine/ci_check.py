@@ -80,15 +80,18 @@ run(P, ev)
 x = audio(P).mean(1)
 check("no stuck notes after looper clear", rms(x, 5.0, 5.5) < 0.002, f"rms at 5 s {rms(x, 5.0, 5.5):.4f}")
 
-# 4. switching engines while playing morphs (no drop-out)
+# 4. switching engines while playing: a short fade (no gap, no click), held notes keep sounding
 ev = [(300, "eng-in 0 2 57 100"), (301, "eng-in 4 2 11 100"), (500, "notesRaw 69 100"), (550, "notesRaw 69 0"),
-      (600, "knob1 0.79"), (2000, f"knob1 {0.5 / 6}"), (6000, "eng-in 0 2 57 0"), (7000, "knob2 0.5")]
+      (600, "knob1 0.79")]
+for i, t in enumerate(range(1500, 9000, 1200)):
+    ev.append((t, f"knob1 {((i % 6) + 0.5) / 6}"))
+ev += [(9500, "eng-in 0 2 57 0"), (10000, "knob2 0.5")]
 log = run(P, ev)
 x = audio(P).mean(1)
-levels = [rms(x, t, t + 0.1) for t in np.arange(1.0, 5.8, 0.1)]
-loads = [l for l in log.splitlines() if l.startswith("eng-load")]
-dip = 20 * np.log10(min(levels) / max(levels))
-check("engine morph", len(loads) >= 2 and dip > -9, f"{len(loads)} loads, deepest dip {dip:.1f} dB")
+lv = np.array([rms(x, t, t + 0.01) for t in np.arange(1.0, 9.4, 0.01)])
+quiet = lv < 0.1 * np.median(lv)
+longest = max((len(r) for r in "".join("1" if q else "0" for q in quiet).split("0")), default=0) * 10
+check("engine switch while playing", not errors(log) and longest <= 60, f"longest dip {longest} ms")
 
 # 5. MIDI looper records and plays back
 ev = []
@@ -132,6 +135,32 @@ log = run(P, ev)
 x = audio(P).mean(1)
 sent = [l for l in log.splitlines() if l.startswith("dmx-sent")]
 check("tuning sent while looping", len(sent) >= 96 and rms(x, 3.5, 4.2) > 0.02, f"{len(sent)} MIDI events")
+
+# 8. no clicks while overdubbing the audio looper or afterwards (bursts above 8 kHz; Halo, delay/reverb off)
+def hf_clicks(x, a, b, db=18.0):
+    seg = x[int(a * SR):int(b * SR)]
+    S = np.fft.rfft(seg); f = np.fft.rfftfreq(len(seg), 1 / SR); S[f < 8000] = 0
+    hp = np.fft.irfft(S, len(seg)); w = 220
+    e = np.array([np.sum(hp[i:i + w] ** 2) for i in range(0, len(hp) - w, w)]) + 1e-12
+    return [round(a + i * w / SR, 3) for i in range(2, len(e))
+            if 10 * np.log10(e[i] / np.median(e[max(0, i - 40):i + 40])) > db and e[i] > 1e-7]
+ev = []
+key(ev, 200, 64)
+ev += [(300, "knob3 0.5"), (310, "knob3 0"), (320, "knob4 0.5"), (330, "knob4 0")]
+key(ev, 400, 60)
+ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {0.5 / 6}"),
+       (470, "notesRaw 60 100"), (480, "notesRaw 60 0")]
+key(ev, 1500, 81)
+note(ev, 1520, 2, 57, 2100, 90)
+key(ev, 3600, 81)
+key(ev, 4000, 81)
+note(ev, 4050, 3, 64, 6500, 90)
+key(ev, 10800, 81)
+ev.append((15000, "knob2 0.5"))
+run(P, ev)
+x = audio(P).mean(1)
+cl = hf_clicks(x, 3.7, 14.9)
+check("no clicks in audio overdubs or at the loop seam", not cl, f"clicks at {cl[:5]}" if cl else "")
 
 print()
 if failures:

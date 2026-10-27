@@ -36,7 +36,7 @@ def build(out_dir):
         y += 22
     y = 90
     vals = ("engmode engcurve engnr enggr engpage englstate engllen engltop engldub engli englnum englpos "
-            "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engpend engbus engloaded engmorph engslA engslB engmorphms engrxmute engrsize engfreeze engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engcombok engtunidx enggn enggv "
+            "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engrxmute engrsize engfreeze engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engcombok engtunidx enggn enggv "
             "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey").split()
     vals = vals + sec_aloop.VALUES
     for i, nm in enumerate(vals):
@@ -53,7 +53,7 @@ def build(out_dir):
     msg_to(m, st, "; engscalenames clear; engscalenames read scales.txt", 450, 270, outlet=5)
     to(m, st, "s $0-scanlib", 400, 300, outlet=5)
     msg_to(m, st, "; engparams clear; engparams read engines.txt", 300, 140, outlet=4)
-    for i, (nm, v) in enumerate((("engheld", -1), ("englspd", 1), ("engbeat", 500), ("engarpdiv", 4), ("engperm", 1), ("engarppat", 0), ("engarpoct", 1), ("engmorphms", 1500), ("engbus", 0), ("engloaded", 0), ("engmorph", 0), ("engslA", 0), ("engslB", 0), ("engkl1", -1), ("engkl2", -1), ("engkl3", -1), ("engkl4", -1))):
+    for i, (nm, v) in enumerate((("engheld", -1), ("englspd", 1), ("engbeat", 500), ("engarpdiv", 4), ("engperm", 1), ("engarppat", 0), ("engarpoct", 1), ("engkl1", -1), ("engkl2", -1), ("engkl3", -1), ("engkl4", -1))):
         to(m, msg_to(m, st, str(v), 550 + i * 60, 140, outlet=5), f"v {nm}", 550 + i * 60, 165)
     for i, (nm, v) in enumerate((("eng-rsize", 0.5), ("eng-throwfb", 0.97))):
         to(m, msg_to(m, st, str(v), 750 + i * 60, 140, outlet=5), f"s {nm}", 750 + i * 60, 165)

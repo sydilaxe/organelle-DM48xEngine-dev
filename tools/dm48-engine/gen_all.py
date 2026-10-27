@@ -5,6 +5,7 @@ OUT = sys.argv[1]
 shutil.rmtree(OUT, ignore_errors=True)
 os.makedirs(OUT)
 gen_voice.build(OUT)
+gen_voice.build_ehost(OUT)
 gen_engines.build(OUT)
 gen_main.build(OUT)
 subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_scales.py"),

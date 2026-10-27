@@ -65,7 +65,13 @@ This is the working memory for this project: read it first in any new session.
   - **Playback:** one `phasor~` playhead reads every layer, and each layer has its own gain (`engag`, used for undo and fade).
   - **Speed per layer:** each layer stores its own mapping, read index = phase × A + B. A is ±(samples per pass at the recording speed) and B is 0 or the length. Overdubs at any speed or direction therefore follow later speed changes like tape (`$0-alayset j A B`). Layers stopped before a full pass are marked `engadirty` and zeroed when reused.
   - **Writing:** one writer (`tabwrite~` with `set` / `start N`) writes the newest layer as input×gate plus existing×k. k is 0 for the first pass and 1 after that. A layer always gets at least one full pass, so a reused layer never contains old audio.
-  - **Wraps:** a control clock (`$0-awrap`) resets the phase and restarts the writer. It is debounced by 20 ms, re-aligned by the MIDI loop's `$0-cycle` when synced, and rescheduled from the current phase when the speed changes.
+  - **Wraps:** the playhead phasor runs freely and is reset only when playback (re)starts.
+    - A clock (`$0-atick`) fires about 3 ms after each wrap, scheduled from the snapshot phase, so it never drifts.
+    - At each tick the writer carries on across the seam: the x samples it wrote past the layer end are copied to the start, then it continues with `start x`.
+    - The writer starts at playhead + 1 sample: `snapshot~` holds the last sample of the previous block, and `tabwrite~ start` begins at the next one.
+    - The overdub re-reads the old sample with `tabread~` at the rounded index, because `tabread4~` would blend in the neighbour just overwritten.
+    - The first take records 12 ms extra and crossfades it into its start, so the seam is click-free.
+    - `t_clicks.py` measures clicks (bursts above 8 kHz); `DBG_ALOOP=1` records a sample counter for alignment checks.
   - **Pitch shift:** two crossfaded `vd~` taps; bypassed at 0 semitones.
   - **Tap points:** Pre `eng-tap-pre` / `eng-aret-pre` (into the FX); Post `eng-tap-postL/R` / `eng-aret-L/R` (before the limiter).
   - **DSP:** switched off until the first recording (`$0-adsp`).
@@ -74,15 +80,12 @@ This is the working memory for this project: read it first in any new session.
   - Waveforms are sent as `sendtyped /oled/gWaveform ib 3 <128 y>`, as the Organelle's own patches do.
   - The scope finds a rising zero crossing in a 1024-sample capture and auto-scales.
   - The loop view draws the per-layer overviews (`engov<j>`) and the playhead.
-- **Engine morphing:**
-  - Every voice has two engine slots, `pd $0-slotA` and `pd $0-slotB`.
-  - Loading sends `eng-load A|B symbol engines/NAME`. The engine is created with the argument `eng-A` or `eng-B`, so it reads its knobs as `[r~ $1-p1~]`.
-  - `engbus` says which slot is current; PLAY knob values go to `eng-<bus>-p<k>`.
-  - The new slot replays the voice's current pitch (with ms 0, i.e. a new note), level and timbre.
-  - `eng-xfade "target ms"` drives `[r~ eng-xf~]`, an equal-power cos/sin crossfade in each voice.
-  - When the fade is done, the old slot's switch~ goes off (`engslA`/`engslB` plus `eng-slupd`).
-  - A choice made during a morph waits (`engpend`). The engine knob is debounced by 350 ms.
-  - Morph time is `engmorphms` (hold low A + knob).
+- **Engines (no morphing):**
+  - Every engine in `engines/` is created once at start-up in every voice: `eng-add index engines/NAME` makes an `[ehost]` in `pd $0-eng`.
+  - Only the selected engine runs (`eng-esel`). Switching fades the old engine out over 15 ms, then the new one in.
+  - Nothing is created while playing. On the Organelle, creating objects while DSP runs (the old dynamic slots and the morph) made Pd rebuild its DSP graph, and that popped.
+  - Engines get the argument `eng`, so `[r~ $1-p1~]` means `eng-p1~`.
+- **Panic (low D#)** sends `eng-panic`: notes off, both loopers stopped (kept), freeze, wet-only and arp off, and every `delwrite~` in the FX cleared.
 - **Voice allocation:** one voice per key. A repeated note-on first releases the key, and orphan note-offs are dropped (`engkeyon`). This fixed stuck notes after clearing the looper.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).
 - **Settings:** defaults are used only when `settings.txt` is missing. The harness resets settings before each test run, because auto-save writes into the patch folder.

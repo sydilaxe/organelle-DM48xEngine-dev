@@ -208,7 +208,7 @@ the high octave holds performance effects.</p>
 <tr><td>C</td><td>PLAY page</td><td>Reverb <b>freeze</b> on/off</td></tr>
 <tr><td>C♯</td><td>LIBRARY page</td><td>Delay <b>throw</b> (while held)</td></tr>
 <tr><td>D</td><td>SHAPE page</td><td>Octave down on/off</td></tr>
-<tr><td>D♯</td><td>Panic — all notes off</td><td>Octave up on/off</td></tr>
+<tr><td>D♯</td><td><b>Panic</b>: silence everything</td><td>Octave up on/off</td></tr>
 <tr><td>E</td><td>FX page</td><td><b>Wet only</b> (dry signal off) on/off</td></tr>
 <tr><td>F</td><td>SETUP page</td><td><b>Tap tempo</b> — two taps less than 2 s apart</td></tr>
 <tr><td>F♯</td><td>—</td><td><b>Arpeggiator</b> on/off</td></tr>
@@ -226,7 +226,6 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
 <tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
-<tr><td>A (low, ENGINE)</td><td>any knob</td><td><b>Morph time</b> 0.05–8 s (default 1.5 s)</td></tr>
 <tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style) / <b>pitch</b> −12…+12 / <b>level</b> / <b>layer fade</b></td></tr>
 <tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
@@ -277,11 +276,10 @@ on a C harp the draw chord G-B-D-F becomes the pure 4:5:6:7 chord).</p>
 <h2 class="pb">6. Engines</h2>
 <p>An engine is one voice; the patch runs eight. All six bundled engines react to breath in several small ways at once,
 and they are level-matched, so switching doesn't jump in volume.</p>
-<p><b>Morphing.</b> Change the engine while you play and the sound morphs instead of cutting: the new engine starts in a second
-slot of every voice, takes over the notes you are holding (with their bends and breath), and the two crossfade over the
-<b>morph time</b> (hold low A + turn a knob; 1.5 s by default). Each engine keeps its own knob values during the morph.
-When it is done the old engine switches off and costs nothing. Turning the engine knob quickly through several engines gives one
-morph to where the knob stops; a choice made during a morph follows when it ends. Steel plucks its string when it morphs in.</p>
+<p><b>Switching engines while you play.</b> Every engine is loaded once when the patch starts and stays switched off
+(costing nothing) until you choose it. Changing the engine fades the old one out and the new one in within about 30 ms,
+and the notes you are holding carry on with the new sound. Nothing is loaded at that moment, so there is no pop.
+Turning the engine knob quickly through several engines switches once, to where the knob stops.</p>
 <table><tr><th>Engine</th><th>Character</th><th>Knobs</th><th>What breath does</th></tr>
 <tr><td><b>Volt</b></td><td>raw, electric</td><td>Fold · Grit · Detune · Tone</td><td>More wave-folding, more sample-rate grit, a brighter filter and a slight upward strain of pitch.</td></tr>
 <tr><td><b>Halo</b></td><td>ethereal, resonant</td><td>Shimmer · Resonance · Air · Bloom</td><td>Upper partials bloom in (Bloom sets how fast), breath noise rings two tuned resonators, which brighten.</td></tr>
@@ -308,7 +306,7 @@ the current engine, so you can change engine, tuning or effects while a loop pla
 Each loop layer plays on its own set of channels, so loop notes never cut off live notes or each other.</p>
 <h3>Audio looper</h3>
 <p>The MIDI loop always plays through the current engine. The <b>audio looper</b> records the sound itself, so you can
-layer different engines: record a pass with Halo, morph to Steel, overdub, and so on. Up to 6 stereo layers, 45 s long.</p>
+layer different engines: record a pass with Halo, switch to Steel, overdub, and so on. Up to 6 stereo layers, 45 s long.</p>
 <table><tr><th>Action</th><th>How</th></tr>
 <tr><td>Record / play / overdub</td><td>Tap high A: record › play › overdub › play … (a thin line under the loop bar shows the audio loop)</td></tr>
 <tr><td>In time with a MIDI loop</td><td>If a MIDI loop is playing, the audio loop waits for its start and records exactly one cycle, so both stay in time.</td></tr>
@@ -388,7 +386,7 @@ inlet 3         timbre  "value ms"  0..1, 0.5 = neutral (CC 74)
 outlet~         mono audio
 
 Shared:  [r~ $1-p1~] .. [r~ $1-p4~]  PLAY knobs (0..1, smoothed)   [r $1-p1] .. control rate
-         ($1 = the slot name the host passes, eng-A or eng-B, so two engines can morph with their own knobs)
+         (every engine in the folder is created once at start-up and switched off until selected)
          [r~ eng-bamt~]  Breath&gt;Tone    [r~ eng-body~]  Body    [r~ eng-vib]  vibrato (semitones)
          [r~ eng-sawk]   for lib/bsaw (band-limited saw)
 
@@ -417,6 +415,9 @@ voices held — less in normal playing. If you hear clicks, play fewer notes at 
 <tr><td>Breath does nothing</td><td>DM48X Breath sens not Off; Breath CC# 11 / 2 / 7 or Aftertouch; the strip's breath meter should move.</td></tr>
 <tr><td>Bends far too wide</td><td>SETUP Note Bend vs the DM48X Bend range (§11).</td></tr>
 <tr><td>Knob does nothing</td><td>A key may still count as held — press and release any low-octave key.</td></tr>
+<tr><td>A sound keeps going</td><td>Press low D♯ (<b>Panic</b>): all notes off, both loopers stop (nothing is erased; start them again
+as usual), freeze, throw and the arpeggiator switch off, and the delay and reverb are emptied. Then please note what you did just
+before, so it can be fixed.</td></tr>
 <tr><td>Pop from the speaker when sending</td><td>Should be gone in this version (the DM48X's replies are now ignored while sending). If it persists, it is likely the USB power draw of the DM48X saving — try the headphone/line out, or a powered USB hub.</td></tr>
 <tr><td>Tuning didn't arrive</td><td>DM48X must be in Receive tuning before you press Aux; check line 5 says Sent!.</td></tr></table>
 <div class="warn">Tested offline in Pure Data 0.54 (the Organelle runs 0.53, and only objects available in 0.53 are used) with recorded test

@@ -120,9 +120,15 @@ def keys():
     spage = ky.obj("s eng-page", 250, 420)
     for i, pg in ((0, 0), (1, 6), (2, 1), (4, 2), (5, 3), (6, 4), (7, 5)):
         ky.c(msg_to(ky, fsel, str(pg), 250 + i * 30, 360, outlet=i), 0, spage, 0)
-    pn = msg_to(ky, fsel, "stop", 350, 390, outlet=3)
-    to(ky, pn, "s eng-allnotesoff", 350, 420)
-    to(ky, msg_to(ky, fsel, "list PANIC all notes off", 420, 390, outlet=3), "s $0-toast", 420, 420)
+    # PANIC: everything silent without losing anything - notes off, loops stopped (kept), freeze / throw / arp off,
+    # delay and reverb emptied
+    to(ky, msg_to(ky, fsel, "list PANIC - all silent", 420, 390, outlet=3), "s $0-toast", 420, 420)
+    to(ky, fsel, "s eng-panic", 350, 445, outlet=3)
+    pnr = ky.obj("r eng-panic", 500, 390)
+    to(ky, msg_to(ky, pnr, "stop", 500, 415), "s eng-allnotesoff", 500, 440)
+    to(ky, msg_to(ky, pnr, "0", 560, 415), "s eng-throw", 560, 440)
+    to(ky, chain(ky, pnr, ["expr (englstate == 2) || (englstate == 3)", "sel 1"], 620, 415), "s eng-loop-stopstart", 620, 465)
+    to(ky, chain(ky, pnr, ["expr (engastate == 3) || (engastate == 4)", "sel 1"], 800, 415), "s eng-aloop-stopstart", 800, 465)
     to(ky, fsel, "s eng-loop-undo", 500, 450, outlet=8)
     to(ky, fsel, "s eng-loop-stopstart", 620, 450, outlet=9)
     def toggle(outlet, name, label, x):
@@ -131,6 +137,12 @@ def keys():
         ky.c(t, 0, f, 0)
         n = to(ky, f, "== 0", x + 40, 385)
         ky.c(n, 0, f, 1)
+        if name != "$0-perm":             # panic: off (without a message)
+            pz = chain(ky, ky.obj("r eng-panic", x + 100, 360), ["f", "sel 1"], x + 100, 385)
+            ky.c(n, 0, pz - 1, 1)
+            pzt = to(ky, pz, "t b b", x + 100, 435)
+            ky.c(msg_to(ky, pzt, "1", x + 160, 460, outlet=1), 0, f, 1)
+            to(ky, msg_to(ky, pzt, "0", x + 100, 460), f"s {name}", x + 100, 485)
         tt = to(ky, n, "t f f", x, 410)
         to(ky, tt, f"s {name}", x + 60, 435, outlet=1)
         sl = to(ky, tt, "sel 1 0", x, 435)
@@ -222,11 +234,6 @@ def combos():
     po = chain(cb, akr, ["expr 1 + int(min($f1, 0.999) * 3)", "change", "t f f"], 1800, 300, outlet=2)
     to(cb, po, "v engarpoct", 1880, 350, outlet=1)
     to(cb, msg_to(cb, po, "list Arp octaves $1", 1800, 350), "s $0-toast", 1800, 375)
-    # A (ENGINE page key): morph time 0.05 .. 8 s
-    mt = chain(cb, vals[6], ["expr int(50 + $f1 * $f1 * 7950)", "t f f"], 1300, 225)
-    to(cb, mt, "v engmorphms", 1400, 250, outlet=1)
-    to(cb, msg_to(cb, to(cb, mt, "expr int($f1 / 100) / 10", 1300, 250), "list Morph time $1 s", 1300, 275),
-       "s $0-toast", 1300, 300)
     # high A (audio looper): knob 1 speed/direction, 2 pitch, 3 level, 4 layer fade
     lk = chain(cb, vals[7], ["expr engcombok; $f1"], 20, 550)
     lkp = cb.obj("pack 0 0", 20, 575)

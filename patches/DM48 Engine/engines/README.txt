@@ -11,10 +11,11 @@ Inlets (left to right) - each receives "value ms" pairs, ready for [line~]:
 Outlet: one [outlet~], mono.
 
 Shared values you can read anywhere in the engine:
-  [r~ $1-p1~] .. [r~ $1-p4~]    the 4 PLAY knobs, 0..1, smoothed   ([r $1-p1] .. control rate)
-                 $1 is the slot name the host gives the engine (eng-A or eng-B): two engines can
-                 run at once while one morphs into the other, each with its own knob values.
-                 (Older engines that read [r~ eng-p1~] still work; they follow the current engine.)
+  [r~ eng-p1~] .. [r~ eng-p4~]  the 4 PLAY knobs, 0..1, smoothed   ([r eng-p1] .. control rate)
+                 (the bundled engines write this as [r~ $1-p1~]: the host creates every engine with
+                  the argument "eng", so it is the same thing)
+  Every engine in the folder is created once when the patch loads and switched off until selected,
+  so keep idle engines cheap: nothing runs while another engine is selected.
   [r~ eng-bamt~]  SHAPE Breath>Tone, 0..1: scale your breath-to-timbre effects by this
   [r~ eng-body~]  SHAPE Body, 0..1: suggested sub / fundamental level
   [r~ eng-vib]    vibrato in semitones - add it to the pitch

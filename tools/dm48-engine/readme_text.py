@@ -16,12 +16,12 @@ KEYS  (the Organelle keyboard is a control surface; play the DM48X)
               F tap tempo  F# arpeggiator  G arp permutations
               G# screen view (pages > scope > loop waveform)
               A audio loop rec/play/dub (hold 1 s = clear)  A# audio undo  B audio stop/start
+ D# PANIC: notes off, loops stop (kept), freeze/throw/arp off, delay and reverb emptied.
  Keys act when released. Hold a key and turn a knob for a combo:
    B + knob   loop speed: centre normal, left = reverse (faster further left),
               right = forward (faster further right). MIDI clock follows.
    C + knob   reverb size      C# + knob  throw feedback     E + knob  reverb amount
    F + knob   tempo 40-200     F# + knob 1 arp rate, knob 2 pattern, knob 3 octaves
-   low A + knob  morph time
    high A + knob 1 audio loop speed/reverse, 2 pitch, 3 level, 4 layer fade
    high B + knob  audio loop records Pre / Post effects
    Audio overdubs keep the speed they were recorded at (tape style): dub at 2x, play at 1x = an octave down.
@@ -43,7 +43,7 @@ SCREEN
  Rows 1-4 (PLAY style): knob number, value bar, name and value. Line 5: page + looper.
 
 ENGINES (engines/ folder; add your own - see engines/README.txt)
- Switching engines while playing MORPHS (crossfade, held notes carry over). Hold low A + knob = morph time.
+ All engines load at start-up; switching while playing is a quick, pop-free fade (held notes carry over).
  volt   raw/electric      Fold Grit Detune Tone
  halo   ethereal/resonant Shimmer Resonance Air Bloom
  under  bass/subharmonic  Subs Drive Tone Octave

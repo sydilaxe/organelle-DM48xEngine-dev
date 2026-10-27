@@ -355,7 +355,7 @@ def settings():
     for j, rcv in enumerate(["$0-" + nm for nm in SAVED] + ["$0-curname", "$0-pstore"]):
         s.c(s.obj(f"r {rcv}", 800 + (j % 10) * 60, 330 + (j // 10) * 22), 0, ag, 0)
     s.c(msg_to(s, to(s, s.obj("loadbang", 1100, 330), "delay 6000", 1100, 355), "1", 1100, 380), 0, ag, 1)
-    s.c(ag, 0, ad, 0)
+    s.c(to(s, ag, "t b", 800, 410), 0, ad, 0)          # (values and the engine name both just restart the timer)
     pdc = s.obj("pdcontrol", 800, 470)
     s.c(msg_to(s, ad, "dir", 800, 445), 0, pdc, 0)
     s.c(pdc, 0, dest, 0)
