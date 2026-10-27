@@ -48,7 +48,7 @@ This is the working memory for this project: read it first in any new session.
 - A tuning is 48 notes in this order: blow 1-12, draw 1-12, blow+slider 1-12, draw+slider 1-12. In the firmware the table is at 0xAB28.
 - Send/Receive tuning: the notes go as plain MIDI notes, recorded or played as a `.mid` file. All files in `tunings/` are format 0, channel 1, with 48 note-on/off pairs.
 - The DM48X only stores note numbers. Just intonation and other microtuning are done in the synth (TUNE page scale + Key).
-- Included tunings (`make_scales.py`, 46 + Order test): Richter Low in all 12 keys (key note G2-F#3, slider +1 octave), Country, Paddy Richter, Harmonic Minor, Chromatic (slider = +1 semitone: Solo C/G, Low C, Augmented, Diminished), Ambient and World scales.
+- Included tunings (`make_scales.py`, 46 + Order test) sit in folders (Ambient, Chromatic, Richter, World); LIBRARY knob 2 picks the folder (0 = All). Richter Low in all 12 keys (key note G2-F#3, slider +1 octave), Country, Paddy Richter, Harmonic Minor, Chromatic (slider = +1 semitone: Solo C/G, Low C, Augmented, Diminished), Ambient and World scales.
 - In DM48 Engine, a tuning whose name ends in a key ("Richter Low D") also sets the TUNE Key when sent.
 - While a tuning is being sent, DM48X input is ignored, plus 0.6 s afterwards. This fixed a reported "pop".
 

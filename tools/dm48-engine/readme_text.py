@@ -36,7 +36,7 @@ PAGES (knobs 1-4)
  TUNE    Family, Scale (78 scales in 10 families: Western, Temperament, Gamelan, African,
          Japanese, Chinese, SE-Asian, Maqam, Indian, Byzantine), Key. Scales retune each note.
  ENGINE  Engine, MIDI MPE/Standard, Level, MIDI out (Off / Echo / Echo+Clock); line 4 = MIDI in
- LIBRARY Knob 1 picks a tuning in tunings/, Aux sends it (DM48X: Tuning editor > Receive tuning)
+ LIBRARY Knob 2 picks a folder (All, Ambient, Chromatic, Richter, World), knob 1 a tuning, Aux sends it (DM48X: Tuning editor > Receive tuning)
 
 SCREEN
  Top strip: [page tabs] [loop bar] [arp dot] [breath meter]

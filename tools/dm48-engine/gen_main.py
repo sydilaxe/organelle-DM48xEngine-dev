@@ -31,13 +31,13 @@ def build(out_dir):
     scl = m.msg("; engscales 0 " + " ".join(str(round(v, 4)) for v in SCALE_TABLE)
                 + "; engfamstart 0 " + " ".join(map(str, FAM_START)) + "; engfamcount 0 " + " ".join(map(str, FAM_COUNT))
                 + "; engfamof 0 " + " ".join(map(str, FAM_OF)), 700, 40)
-    for nm in ("englp", "engfiles", "englist", "engparams", "engdesc", "engarp", "engscalenames"):
+    for nm in ("englp", "engfiles", "engdirs", "englist", "engparams", "engdesc", "engarp", "engscalenames"):
         m.obj(f"text define {nm}", 700, y)
         y += 22
     y = 90
     vals = ("engmode engcurve engnr enggr engpage englstate engllen engltop engldub engli englnum englpos "
             "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engrxmute engrsize engfreeze engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engcombok engtunidx enggn enggv "
-            "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey").split()
+            "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey dmxndirs dmxdir dmxk1").split()
     vals = vals + sec_aloop.VALUES
     for i, nm in enumerate(vals):
         m.obj(f"value {nm}", 950 + (i // 18) * 150, 90 + (i % 18) * 22)

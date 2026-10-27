@@ -357,13 +357,13 @@ Pitches are measured exact in testing (e.g. E in Pelog Degung Sejati is +24 cent
 <h3>The LIBRARY page</h3>
 <p>Sends tunings (MIDI files in the <code>tunings/</code> folder) to the DM48X, without stopping the loop or touching the sound.</p>
 <ol><li>On the DM48X: <b>Tuning editor</b> › step past the last hole › <b>Receive tuning</b>.</li>
-<li>On the Organelle: low C♯ (LIBRARY), knob 1 to choose, <b>Aux</b> to send. Line 5 says <i>Sent!</i>.</li>
+<li>On the Organelle: low C♯ (LIBRARY). Knob 2 picks a folder — <i>All</i>, then each subfolder of <code>tunings/</code> (Ambient, Chromatic, Richter, World); line 1 shows the folder and how many tunings it holds. Knob 1 picks the tuning, <b>Aux</b> sends it. Line 5 says <i>Sent!</i>.</li>
 <li>On the DM48X: hold the round button for 2 s on the Tuning page to save it to a slot.</li></ol>
 <div class="warn">First time: send <b>Order test</b> and check in the Tuning editor that hole 1 blow = C3 (MIDI 48), hole 1 draw = C4 (60),
 hole 1 blow + slider = C5 (72) and hole 12 draw + slider = B6 (95). The 48-note order was read from the DM48X firmware; this confirms it on your
 instrument. Nothing is stored until you save on the DM48X.</div>
 <p><b>Key follows the tuning.</b> If the tuning's name ends in a key (<i>Richter Low D</i>, <i>… Bb</i>, <i>… F#</i>), sending it also sets the TUNE page Key, so the synth's just intonation is built on the same key as the harp. Line 5 shows <i>Sent! Synth key D</i>. You can still change Key afterwards. The DM48X itself only stores ordinary note numbers; the pure tuning happens in the synth.</p>
-<p>To add your own, record the DM48X's <b>Send tuning</b> as a MIDI file and put it in <code>tunings/</code>. Format 0 and 1 files work; only the notes are sent.</p>
+<p>To add your own, record the DM48X's <b>Send tuning</b> as a MIDI file and put it in <code>tunings/</code> or any folder inside it (a new folder appears on knob 2 the next time the patch loads). Format 0 and 1 files work; only the notes are sent.</p>
 <div class="note">The Organelle has one MIDI output, so tuning notes also reach anything on the hardware MIDI Out jack. MIDI echo pauses while a tuning is sent, and MIDI coming <i>from</i> the DM48X is ignored until 0.6 s after it ends, so the instrument's replies can't trigger notes or a pop.</div>
 
 <h2>11. MIDI</h2>

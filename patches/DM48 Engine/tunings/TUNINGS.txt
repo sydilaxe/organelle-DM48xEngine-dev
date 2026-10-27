@@ -1,270 +1,270 @@
-Tunings in this folder (holes 1-12, left to right; middle C = C4 = MIDI 60)
+Tunings in this folder and its subfolders (holes 1-12, left to right; middle C = C4 = MIDI 60)
 
-Richter Low G
+Richter / Richter Low G
   blow            D2   G2   B2   D3   G3   B3   D4   G4   B4   D5   G5   B5
   draw            E2   A2   D3  Gb3   A3   C4   E4  Gb4   A4   C5   E5  Gb5
   blow+slider     D3   G3   B3   D4   G4   B4   D5   G5   B5   D6   G6   B6
   draw+slider     E3   A3   D4  Gb4   A4   C5   E5  Gb5   A5   C6   E6  Gb6
 
-Richter Low Ab
+Richter / Richter Low Ab
   blow           Eb2  Ab2   C3  Eb3  Ab3   C4  Eb4  Ab4   C5  Eb5  Ab5   C6
   draw            F2  Bb2  Eb3   G3  Bb3  Db4   F4   G4  Bb4  Db5   F5   G5
   blow+slider    Eb3  Ab3   C4  Eb4  Ab4   C5  Eb5  Ab5   C6  Eb6  Ab6   C7
   draw+slider     F3  Bb3  Eb4   G4  Bb4  Db5   F5   G5  Bb5  Db6   F6   G6
 
-Richter Low A
+Richter / Richter Low A
   blow            E2   A2  Db3   E3   A3  Db4   E4   A4  Db5   E5   A5  Db6
   draw           Gb2   B2   E3  Ab3   B3   D4  Gb4  Ab4   B4   D5  Gb5  Ab5
   blow+slider     E3   A3  Db4   E4   A4  Db5   E5   A5  Db6   E6   A6  Db7
   draw+slider    Gb3   B3   E4  Ab4   B4   D5  Gb5  Ab5   B5   D6  Gb6  Ab6
 
-Richter Low Bb
+Richter / Richter Low Bb
   blow            F2  Bb2   D3   F3  Bb3   D4   F4  Bb4   D5   F5  Bb5   D6
   draw            G2   C3   F3   A3   C4  Eb4   G4   A4   C5  Eb5   G5   A5
   blow+slider     F3  Bb3   D4   F4  Bb4   D5   F5  Bb5   D6   F6  Bb6   D7
   draw+slider     G3   C4   F4   A4   C5  Eb5   G5   A5   C6  Eb6   G6   A6
 
-Richter Low B
+Richter / Richter Low B
   blow           Gb2   B2  Eb3  Gb3   B3  Eb4  Gb4   B4  Eb5  Gb5   B5  Eb6
   draw           Ab2  Db3  Gb3  Bb3  Db4   E4  Ab4  Bb4  Db5   E5  Ab5  Bb5
   blow+slider    Gb3   B3  Eb4  Gb4   B4  Eb5  Gb5   B5  Eb6  Gb6   B6  Eb7
   draw+slider    Ab3  Db4  Gb4  Bb4  Db5   E5  Ab5  Bb5  Db6   E6  Ab6  Bb6
 
-Richter Low C
+Richter / Richter Low C
   blow            G2   C3   E3   G3   C4   E4   G4   C5   E5   G5   C6   E6
   draw            A2   D3   G3   B3   D4   F4   A4   B4   D5   F5   A5   B5
   blow+slider     G3   C4   E4   G4   C5   E5   G5   C6   E6   G6   C7   E7
   draw+slider     A3   D4   G4   B4   D5   F5   A5   B5   D6   F6   A6   B6
 
-Richter Low Db
+Richter / Richter Low Db
   blow           Ab2  Db3   F3  Ab3  Db4   F4  Ab4  Db5   F5  Ab5  Db6   F6
   draw           Bb2  Eb3  Ab3   C4  Eb4  Gb4  Bb4   C5  Eb5  Gb5  Bb5   C6
   blow+slider    Ab3  Db4   F4  Ab4  Db5   F5  Ab5  Db6   F6  Ab6  Db7   F7
   draw+slider    Bb3  Eb4  Ab4   C5  Eb5  Gb5  Bb5   C6  Eb6  Gb6  Bb6   C7
 
-Richter Low D
+Richter / Richter Low D
   blow            A2   D3  Gb3   A3   D4  Gb4   A4   D5  Gb5   A5   D6  Gb6
   draw            B2   E3   A3  Db4   E4   G4   B4  Db5   E5   G5   B5  Db6
   blow+slider     A3   D4  Gb4   A4   D5  Gb5   A5   D6  Gb6   A6   D7  Gb7
   draw+slider     B3   E4   A4  Db5   E5   G5   B5  Db6   E6   G6   B6  Db7
 
-Richter Low Eb
+Richter / Richter Low Eb
   blow           Bb2  Eb3   G3  Bb3  Eb4   G4  Bb4  Eb5   G5  Bb5  Eb6   G6
   draw            C3   F3  Bb3   D4   F4  Ab4   C5   D5   F5  Ab5   C6   D6
   blow+slider    Bb3  Eb4   G4  Bb4  Eb5   G5  Bb5  Eb6   G6  Bb6  Eb7   G7
   draw+slider     C4   F4  Bb4   D5   F5  Ab5   C6   D6   F6  Ab6   C7   D7
 
-Richter Low E
+Richter / Richter Low E
   blow            B2   E3  Ab3   B3   E4  Ab4   B4   E5  Ab5   B5   E6  Ab6
   draw           Db3  Gb3   B3  Eb4  Gb4   A4  Db5  Eb5  Gb5   A5  Db6  Eb6
   blow+slider     B3   E4  Ab4   B4   E5  Ab5   B5   E6  Ab6   B6   E7  Ab7
   draw+slider    Db4  Gb4   B4  Eb5  Gb5   A5  Db6  Eb6  Gb6   A6  Db7  Eb7
 
-Richter Low F
+Richter / Richter Low F
   blow            C3   F3   A3   C4   F4   A4   C5   F5   A5   C6   F6   A6
   draw            D3   G3   C4   E4   G4  Bb4   D5   E5   G5  Bb5   D6   E6
   blow+slider     C4   F4   A4   C5   F5   A5   C6   F6   A6   C7   F7   A7
   draw+slider     D4   G4   C5   E5   G5  Bb5   D6   E6   G6  Bb6   D7   E7
 
-Richter Low F#
+Richter / Richter Low F#
   blow           Db3  Gb3  Bb3  Db4  Gb4  Bb4  Db5  Gb5  Bb5  Db6  Gb6  Bb6
   draw           Eb3  Ab3  Db4   F4  Ab4   B4  Eb5   F5  Ab5   B5  Eb6   F6
   blow+slider    Db4  Gb4  Bb4  Db5  Gb5  Bb5  Db6  Gb6  Bb6  Db7  Gb7  Bb7
   draw+slider    Eb4  Ab4  Db5   F5  Ab5   B5  Eb6   F6  Ab6   B6  Eb7   F7
 
-Country C
+Richter / Country C
   blow            G2   C3   E3   G3   C4   E4   G4   C5   E5   G5   C6   E6
   draw            A2   D3   G3   B3   D4  Gb4   A4   B4   D5   F5   A5   B5
   blow+slider     G3   C4   E4   G4   C5   E5   G5   C6   E6   G6   C7   E7
   draw+slider     A3   D4   G4   B4   D5  Gb5   A5   B5   D6   F6   A6   B6
 
-Country G
+Richter / Country G
   blow            D2   G2   B2   D3   G3   B3   D4   G4   B4   D5   G5   B5
   draw            E2   A2   D3  Gb3   A3  Db4   E4  Gb4   A4   C5   E5  Gb5
   blow+slider     D3   G3   B3   D4   G4   B4   D5   G5   B5   D6   G6   B6
   draw+slider     E3   A3   D4  Gb4   A4  Db5   E5  Gb5   A5   C6   E6  Gb6
 
-Country A
+Richter / Country A
   blow            E2   A2  Db3   E3   A3  Db4   E4   A4  Db5   E5   A5  Db6
   draw           Gb2   B2   E3  Ab3   B3  Eb4  Gb4  Ab4   B4   D5  Gb5  Ab5
   blow+slider     E3   A3  Db4   E4   A4  Db5   E5   A5  Db6   E6   A6  Db7
   draw+slider    Gb3   B3   E4  Ab4   B4  Eb5  Gb5  Ab5   B5   D6  Gb6  Ab6
 
-Country D
+Richter / Country D
   blow            A2   D3  Gb3   A3   D4  Gb4   A4   D5  Gb5   A5   D6  Gb6
   draw            B2   E3   A3  Db4   E4  Ab4   B4  Db5   E5   G5   B5  Db6
   blow+slider     A3   D4  Gb4   A4   D5  Gb5   A5   D6  Gb6   A6   D7  Gb7
   draw+slider     B3   E4   A4  Db5   E5  Ab5   B5  Db6   E6   G6   B6  Db7
 
-Paddy Richter C
+Richter / Paddy Richter C
   blow            G2   C3   E3   A3   C4   E4   G4   C5   E5   G5   C6   E6
   draw            A2   D3   G3   B3   D4   F4   A4   B4   D5   F5   A5   B5
   blow+slider     G3   C4   E4   A4   C5   E5   G5   C6   E6   G6   C7   E7
   draw+slider     A3   D4   G4   B4   D5   F5   A5   B5   D6   F6   A6   B6
 
-Paddy Richter G
+Richter / Paddy Richter G
   blow            D2   G2   B2   E3   G3   B3   D4   G4   B4   D5   G5   B5
   draw            E2   A2   D3  Gb3   A3   C4   E4  Gb4   A4   C5   E5  Gb5
   blow+slider     D3   G3   B3   E4   G4   B4   D5   G5   B5   D6   G6   B6
   draw+slider     E3   A3   D4  Gb4   A4   C5   E5  Gb5   A5   C6   E6  Gb6
 
-Paddy Richter D
+Richter / Paddy Richter D
   blow            A2   D3  Gb3   B3   D4  Gb4   A4   D5  Gb5   A5   D6  Gb6
   draw            B2   E3   A3  Db4   E4   G4   B4  Db5   E5   G5   B5  Db6
   blow+slider     A3   D4  Gb4   B4   D5  Gb5   A5   D6  Gb6   A6   D7  Gb7
   draw+slider     B3   E4   A4  Db5   E5   G5   B5  Db6   E6   G6   B6  Db7
 
-Harmonic Minor A
+Richter / Harmonic Minor A
   blow            E2   A2   C3   E3   A3   C4   E4   A4   C5   E5   A5   C6
   draw            F2   B2   E3  Ab3   B3   D4   F4  Ab4   B4   D5   F5  Ab5
   blow+slider     E3   A3   C4   E4   A4   C5   E5   A5   C6   E6   A6   C7
   draw+slider     F3   B3   E4  Ab4   B4   D5   F5  Ab5   B5   D6   F6  Ab6
 
-Harmonic Minor C
+Richter / Harmonic Minor C
   blow            G2   C3  Eb3   G3   C4  Eb4   G4   C5  Eb5   G5   C6  Eb6
   draw           Ab2   D3   G3   B3   D4   F4  Ab4   B4   D5   F5  Ab5   B5
   blow+slider     G3   C4  Eb4   G4   C5  Eb5   G5   C6  Eb6   G6   C7  Eb7
   draw+slider    Ab3   D4   G4   B4   D5   F5  Ab5   B5   D6   F6  Ab6   B6
 
-Harmonic Minor D
+Richter / Harmonic Minor D
   blow            A2   D3   F3   A3   D4   F4   A4   D5   F5   A5   D6   F6
   draw           Bb2   E3   A3  Db4   E4   G4  Bb4  Db5   E5   G5  Bb5  Db6
   blow+slider     A3   D4   F4   A4   D5   F5   A5   D6   F6   A6   D7   F7
   draw+slider    Bb3   E4   A4  Db5   E5   G5  Bb5  Db6   E6   G6  Bb6  Db7
 
-Harmonic Minor E
+Richter / Harmonic Minor E
   blow            B2   E3   G3   B3   E4   G4   B4   E5   G5   B5   E6   G6
   draw            C3  Gb3   B3  Eb4  Gb4   A4   C5  Eb5  Gb5   A5   C6  Eb6
   blow+slider     B3   E4   G4   B4   E5   G5   B5   E6   G6   B6   E7   G7
   draw+slider     C4  Gb4   B4  Eb5  Gb5   A5   C6  Eb6  Gb6   A6   C7  Eb7
 
-Chromatic Solo C
+Chromatic / Solo C
   blow            C3   E3   G3   C4   C4   E4   G4   C5   C5   E5   G5   C6
   draw            D3   F3   A3   B3   D4   F4   A4   B4   D5   F5   A5   B5
   blow+slider    Db3   F3  Ab3  Db4  Db4   F4  Ab4  Db5  Db5   F5  Ab5  Db6
   draw+slider    Eb3  Gb3  Bb3   C4  Eb4  Gb4  Bb4   C5  Eb5  Gb5  Bb5   C6
 
-Chromatic Solo G
+Chromatic / Solo G
   blow            G2   B2   D3   G3   G3   B3   D4   G4   G4   B4   D5   G5
   draw            A2   C3   E3  Gb3   A3   C4   E4  Gb4   A4   C5   E5  Gb5
   blow+slider    Ab2   C3  Eb3  Ab3  Ab3   C4  Eb4  Ab4  Ab4   C5  Eb5  Ab5
   draw+slider    Bb2  Db3   F3   G3  Bb3  Db4   F4   G4  Bb4  Db5   F5   G5
 
-Chromatic Low C
+Chromatic / Low C
   blow            C2   E2   G2   C3   C3   E3   G3   C4   C4   E4   G4   C5
   draw            D2   F2   A2   B2   D3   F3   A3   B3   D4   F4   A4   B4
   blow+slider    Db2   F2  Ab2  Db3  Db3   F3  Ab3  Db4  Db4   F4  Ab4  Db5
   draw+slider    Eb2  Gb2  Bb2   C3  Eb3  Gb3  Bb3   C4  Eb4  Gb4  Bb4   C5
 
-Chromatic Augmented
+Chromatic / Augmented
   blow            C3   E3  Ab3   C4   E4  Ab4   C5   E5  Ab5   C6   E6  Ab6
   draw            D3  Gb3  Bb3   D4  Gb4  Bb4   D5  Gb5  Bb5   D6  Gb6  Bb6
   blow+slider    Db3   F3   A3  Db4   F4   A4  Db5   F5   A5  Db6   F6   A6
   draw+slider    Eb3   G3   B3  Eb4   G4   B4  Eb5   G5   B5  Eb6   G6   B6
 
-Chromatic Diminished
+Chromatic / Diminished
   blow            C3  Eb3  Gb3   A3   C4  Eb4  Gb4   A4   C5  Eb5  Gb5   A5
   draw            D3   F3  Ab3   B3   D4   F4  Ab4   B4   D5   F5  Ab5   B5
   blow+slider    Db3   E3   G3  Bb3  Db4   E4   G4  Bb4  Db5   E5   G5  Bb5
   draw+slider    Eb3  Gb3   A3   C4  Eb4  Gb4   A4   C5  Eb5  Gb5   A5   C6
 
-Ambient - Overtones
+Ambient / Overtones
   blow            C2   G2   C3   E3   G3  Bb3   C4   D4   E4  Gb4   G4  Ab4
   draw            G2   E3  Bb3   D4  Gb4  Ab4   B4  Db5  Eb5   F5  Gb5  Ab5
   blow+slider     C3   G3   C4   E4   G4  Bb4   C5   D5   E5  Gb5   G5  Ab5
   draw+slider     G3   E4  Bb4   D5  Gb5  Ab5   B5  Db6  Eb6   F6  Gb6  Ab6
 
-Ambient - Quartal Ladder
+Ambient / Quartal Ladder
   blow            C2   F2  Bb2  Eb3  Ab3  Db4  Gb4   B4   E5   A5   D6   G6
   draw            D2   G2   C3   F3  Bb3  Eb4  Ab4  Db5  Gb5   B5   E6   A6
   blow+slider     G2   C3   F3  Bb3  Eb4  Ab4  Db5  Gb5   B5   E6   A6   D7
   draw+slider     A2   D3   G3   C4   F4  Bb4  Eb5  Ab5  Db6  Gb6   B6   E7
 
-Ambient - Lydian Clusters
+Ambient / Lydian Clusters
   blow            C3   D3   E3  Gb3   G3   A3   B3   C4   D4   E4  Gb4   G4
   draw            E3  Gb3   G3   A3   B3   C4   D4   E4  Gb4   G4   A4   B4
   blow+slider     C4   D4   E4  Gb4   G4   A4   B4   C5   D5   E5  Gb5   G5
   draw+slider     E4  Gb4   G4   A4   B4   C5   D5   E5  Gb5   G5   A5   B5
 
-Ambient - Mystic Tritone
+Ambient / Mystic Tritone
   blow            C3   D3   E3  Gb3   A3  Bb3   C4   D4   E4  Gb4   A4  Bb4
   draw           Gb3  Ab3  Bb3   C4  Eb4   E4  Gb4  Ab4  Bb4   C5  Eb5   E5
   blow+slider     C4   D4   E4  Gb4   A4  Bb4   C5   D5   E5  Gb5   A5  Bb5
   draw+slider    Gb4  Ab4  Bb4   C5  Eb5   E5  Gb5  Ab5  Bb5   C6  Eb6   E6
 
-Ambient - Iwato Void
+Ambient / Iwato Void
   blow            C2  Db2   F2  Gb2  Bb2   C3  Db3   F3  Gb3  Bb3   C4  Db4
   draw            G2  Ab2   C3  Db3   F3   G3  Ab3   C4  Db4   F4   G4  Ab4
   blow+slider     C3  Db3   F3  Gb3  Bb3   C4  Db4   F4  Gb4  Bb4   C5  Db5
   draw+slider     G3  Ab3   C4  Db4   F4   G4  Ab4   C5  Db5   F5   G5  Ab5
 
-Ambient - Mirror
+Ambient / Mirror
   blow            D4   E4   F4   G4   A4  Bb4   C5   D5   E5   F5   G5   A5
   draw            D4   C4   B3   A3   G3  Gb3   E3   D3   C3   B2   A2   G2
   blow+slider     D5   E5   F5   G5   A5  Bb5   C6   D6   E6   F6   G6   A6
   draw+slider     D3   C3   B2   A2   G2  Gb2   E2   D2   C2   B1   A1   G1
 
-Ambient - Open Fifths
+Ambient / Open Fifths
   blow            C2   D2   E2   G2   A2   C3   D3   E3   G3   A3   C4   D4
   draw            G2   A2   B2   D3   E3   G3   A3   B3   D4   E4   G4   A4
   blow+slider     C3   D3   E3   G3   A3   C4   D4   E4   G4   A4   C5   D5
   draw+slider     G3   A3   B3   D4   E4   G4   A4   B4   D5   E5   G5   A5
 
-Ambient - Dorian Thirds
+Ambient / Dorian Thirds
   blow            D3   F3   A3   C4   E4   G4   B4   D5   F5   A5   C6   E6
   draw            E3   G3   B3   D4   F4   A4   C5   E5   G5   B5   D6   F6
   blow+slider     D2   F2   A2   C3   E3   G3   B3   D4   F4   A4   C5   E5
   draw+slider     E2   G2   B2   D3   F3   A3   C4   E4   G4   B4   D5   F5
 
-Ambient - Pentatonic Rain
+Ambient / Pentatonic Rain
   blow            C3   D3   E3   G3   A3   C4   D4   E4   G4   A4   C5   D5
   draw            A3   C4   D4   E4   G4   A4   C5   D5   E5   G5   A5   C6
   blow+slider     C4   D4   E4   G4   A4   C5   D5   E5   G5   A5   C6   D6
   draw+slider     A4   C5   D5   E5   G5   A5   C6   D6   E6   G6   A6   C7
 
-Ambient - Hexatonic Glass
+Ambient / Hexatonic Glass
   blow            C3  Db3   E3   F3  Ab3   A3   C4  Db4   E4   F4  Ab4   A4
   draw            E3   G3  Ab3   B3   C4  Eb4   E4   G4  Ab4   B4   C5  Eb5
   blow+slider     C4  Db4   E4   F4  Ab4   A4   C5  Db5   E5   F5  Ab5   A5
   draw+slider     E4   G4  Ab4   B4   C5  Eb5   E5   G5  Ab5   B5   C6  Eb6
 
-World - Hijaz D
+World / Hijaz D
   blow            D3  Eb3  Gb3   G3   A3  Bb3   C4   D4  Eb4  Gb4   G4   A4
   draw           Eb3  Gb3   G3   A3  Bb3   C4   D4  Eb4  Gb4   G4   A4  Bb4
   blow+slider     D4  Eb4  Gb4   G4   A4  Bb4   C5   D5  Eb5  Gb5   G5   A5
   draw+slider    Eb4  Gb4   G4   A4  Bb4   C5   D5  Eb5  Gb5   G5   A5  Bb5
 
-World - Raga Bhairav C
+World / Raga Bhairav C
   blow            C3  Db3   E3   F3   G3  Ab3   B3   C4  Db4   E4   F4   G4
   draw           Db3   E3   F3   G3  Ab3   B3   C4  Db4   E4   F4   G4  Ab4
   blow+slider     C4  Db4   E4   F4   G4  Ab4   B4   C5  Db5   E5   F5   G5
   draw+slider    Db4   E4   F4   G4  Ab4   B4   C5  Db5   E5   F5   G5  Ab5
 
-World - Hungarian Minor A
+World / Hungarian Minor A
   blow            A2   B2   C3  Eb3   E3   F3  Ab3   A3   B3   C4  Eb4   E4
   draw            B2   C3  Eb3   E3   F3  Ab3   A3   B3   C4  Eb4   E4   F4
   blow+slider     A3   B3   C4  Eb4   E4   F4  Ab4   A4   B4   C5  Eb5   E5
   draw+slider     B3   C4  Eb4   E4   F4  Ab4   A4   B4   C5  Eb5   E5   F5
 
-World - Hirajoshi E
+World / Hirajoshi E
   blow            E2  Gb2   G2   B2   C3   E3  Gb3   G3   B3   C4   E4  Gb4
   draw           Gb2   G2   B2   C3   E3  Gb3   G3   B3   C4   E4  Gb4   G4
   blow+slider     E3  Gb3   G3   B3   C4   E4  Gb4   G4   B4   C5   E5  Gb5
   draw+slider    Gb3   G3   B3   C4   E4  Gb4   G4   B4   C5   E5  Gb5   G5
 
-World - Pelog C
+World / Pelog C
   blow            C3  Db3  Eb3   G3  Ab3   C4  Db4  Eb4   G4  Ab4   C5  Db5
   draw           Db3  Eb3   G3  Ab3   C4  Db4  Eb4   G4  Ab4   C5  Db5  Eb5
   blow+slider     C4  Db4  Eb4   G4  Ab4   C5  Db5  Eb5   G5  Ab5   C6  Db6
   draw+slider    Db4  Eb4   G4  Ab4   C5  Db5  Eb5   G5  Ab5   C6  Db6  Eb6
 
-World - Slendro C
+World / Slendro C
   blow            C3   D3   F3   G3   A3   C4   D4   F4   G4   A4   C5   D5
   draw            D3   F3   G3   A3   C4   D4   F4   G4   A4   C5   D5   F5
   blow+slider     C4   D4   F4   G4   A4   C5   D5   F5   G5   A5   C6   D6
   draw+slider     D4   F4   G4   A4   C5   D5   F5   G5   A5   C6   D6   F6
 
-World - Double Harmonic E
+World / Double Harmonic E
   blow            E2   F2  Ab2   A2   B2   C3  Eb3   E3   F3  Ab3   A3   B3
   draw            F2  Ab2   A2   B2   C3  Eb3   E3   F3  Ab3   A3   B3   C4
   blow+slider     E3   F3  Ab3   A3   B3   C4  Eb4   E4   F4  Ab4   A4   B4

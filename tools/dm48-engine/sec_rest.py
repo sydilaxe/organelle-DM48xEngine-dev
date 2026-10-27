@@ -133,29 +133,71 @@ def library():
     def BE32(x):
         return f"{B(x)} * 16777216 + {B(x + '+1')} * 65536 + {B(x + '+2')} * 256 + {B(x + '+3')}"
 
-    # ---- scan tunings/
+    # ---- scan tunings/: subfolders (knob 2 picks one, 0 = All) and the .mid files in the chosen folder
     st = chain(lb, lb.obj("r $0-scanlib", 20, 30), ["t b b b"], 20, 55)
-    msg_to(lb, st, "; engfiles clear", 200, 80, outlet=2)
+    msg_to(lb, st, "; engdirs clear", 200, 80, outlet=2)
     dts = chain(lb, msg_to(lb, st, "dir", 20, 80, outlet=1), ["pdcontrol", "t s s"], 20, 105)
-    glob = lb.obj("file glob", 20, 180)
-    lb.c(msg_to(lb, dts, "symbol $1/tunings/*.mid", 20, 155, outlet=1), 0, glob, 0)
-    lb.c(msg_to(lb, dts, "symbol $1/tunings/*.MID", 180, 155), 0, glob, 0)
-    to(lb, to(lb, glob, "list split 1", 20, 205), "text insert engfiles 1e+06", 20, 230)
-    sz = chain(lb, st, ["t b b", "text size engfiles"], 350, 80)
-    lb.c(st, 0, sz - 1, 0)
-    lb.conns.remove((st, 0, sz - 1, 0))
-    to(lb, sz, "v dmxcount", 350, 130)
-    msg_to(lb, sz - 1, "; engfiles sort", 450, 105, outlet=1)
-    # ---- knob 1 selects
-    ks = chain(lb, lb.obj("r $0-k1p6", 600, 30),
-               ["expr if(dmxcount > 0, min(int($f1 * dmxcount), dmxcount - 1), 0)", "change -1", "t b f"], 600, 55)
-    to(lb, ks, "v dmxsel", 680, 130, outlet=1)
-    to(lb, ks, "s $0-libdraw", 600, 130)
-    to(lb, lb.obj("r $0-refresh6", 750, 105), "s $0-libdraw", 750, 130)
+    rootm = msg_to(lb, dts, "symbol $1/tunings", 300, 130)   # <patch>/tunings, kept in the All pattern's [symbol]
+    dglob = lb.obj("file glob", 20, 155)
+    lb.c(msg_to(lb, dts, "symbol $1/tunings/*/", 20, 130, outlet=1), 0, dglob, 0)
+    to(lb, to(lb, dglob, "list split 1", 20, 180), "text insert engdirs 1e+06", 20, 205)
+    dt = to(lb, st, "t b b b b", 450, 80)                # after the glob: sort, count, back to All, scan files
+    msg_to(lb, dt, "; engdirs sort", 650, 105, outlet=3)
+    to(lb, to(lb, dt, "text size engdirs", 550, 130, outlet=2), "v dmxndirs", 550, 155)
+    setv(lb, dt, "dmxdir", 0, 500, 180, outlet=1)
+    to(lb, dt, "s $0-scanfiles", 450, 205)
+    # knob 2: folder
+    kd = chain(lb, lb.obj("r $0-k2p6", 900, 30),
+               ["expr min(int($f1 * (dmxndirs + 1)), dmxndirs)", "change -1", "t b f"], 900, 55)
+    to(lb, kd, "v dmxdir", 980, 130, outlet=1)
+    to(lb, kd, "s $0-scanfiles", 900, 130)
+    # file scan for the current folder
+    sf = chain(lb, lb.obj("r $0-scanfiles", 20, 260), ["t b b b b"], 20, 285)
+    msg_to(lb, sf, "; engfiles clear", 300, 310, outlet=3)
+    glob = lb.obj("file glob", 20, 460)
+    pat = chain(lb, sf, ["expr dmxdir", "sel 0"], 20, 310, outlet=2)
+    rall = to(lb, pat, "symbol", 20, 360)                  # All: top level and every subfolder
+    lb.c(rootm, 0, rall, 1)
+    for i, ptn in enumerate(("$1/*.mid", "$1/*.MID", "$1/*/*.mid", "$1/*/*.MID")):
+        lb.c(msg_to(lb, rall, f"symbol {ptn}", 20 + i * 120, 385), 0, glob, 0)
+    one = chain(lb, pat, ["- 1", "text get engdirs"], 200, 335, outlet=1)   # one folder
+    for i, ptn in enumerate(("$1/*.mid", "$1/*.MID")):
+        lb.c(msg_to(lb, one, f"symbol {ptn}", 520 + i * 120, 385), 0, glob, 0)
+    to(lb, to(lb, glob, "list split 1", 20, 485), "text insert engfiles 1e+06", 20, 510)
+    to(lb, chain(lb, sf, ["text size engfiles"], 300, 335, outlet=1), "v dmxcount", 300, 360)
+    msg_to(lb, sf, "; engfiles sort", 450, 335, outlet=1)
+    # folder label for line 1
+    lab = lb.obj("symbol All", 700, 410)
+    lsel = chain(lb, sf, ["expr dmxdir", "sel 0"], 700, 335, outlet=1)
+    lb.c(msg_to(lb, lsel, "symbol All", 700, 385), 0, lab, 0)
+    ln = chain(lb, lsel, ["- 1", "text get engdirs", "file splitname"], 800, 360, outlet=1)
+    lb.c(to(lb, ln, "list split 1", 800, 435), 1, lab, 0)
+    lb.c(ln, 1, lab, 0)
+    resel = to(lb, sf, "s $0-libresel", 20, 535)
+    # ---- knob 1 selects (re-applied after every folder change)
+    k1 = chain(lb, lb.obj("r $0-k1p6", 600, 30), ["t b f"], 600, 55)
+    to(lb, k1, "v dmxk1", 680, 80, outlet=1)
+    sel1 = lb.obj("r $0-libsel", 600, 105)
+    lb.c(k1, 0, lb.obj("s $0-libsel", 600, 80), 0)
+    chg = lb.obj("change -1", 600, 155)
+    lb.c(to(lb, sel1, "expr if(dmxcount > 0, min(int(dmxk1 * dmxcount), dmxcount - 1), 0)", 600, 130), 0, chg, 0)
+    rs = chain(lb, lb.obj("r $0-libresel", 750, 30), ["t b b"], 750, 55)
+    lb.c(msg_to(lb, rs, "set -1", 820, 80, outlet=1), 0, chg, 0)
+    lb.c(rs, 0, lb.obj("s $0-libsel", 750, 80), 0)
+    ks = to(lb, chg, "t b f", 600, 180)
+    to(lb, ks, "v dmxsel", 680, 205, outlet=1)
+    to(lb, ks, "s $0-libdraw", 600, 205)
+    to(lb, lb.obj("r $0-refresh6", 750, 180), "s $0-libdraw", 750, 205)
     # ---- draw
     disp = lb.obj("s $0-disp6", 20, 700)
     rt = chain(lb, lb.obj("r $0-libdraw", 20, 300), ["t b b b b b"], 20, 325)
-    lb.c(msg_to(lb, to(lb, rt, "v dmxcount", 20, 350, outlet=4), "1 Tunings ($1)", 20, 375), 0, disp, 0)
+    hd = to(lb, rt, "t b b", 20, 350, outlet=4)
+    hp = lb.obj("pack s f", 20, 400)
+    lb.c(to(lb, hd, "v dmxcount", 80, 375, outlet=1), 0, hp, 1)
+    hl = to(lb, hd, "symbol", 20, 375)
+    lb.c(lab, 0, hl, 1)
+    lb.c(hl, 0, hp, 0)
+    lb.c(msg_to(lb, hp, "1 $1 ($2)", 20, 425), 0, disp, 0)
     for row in range(3):
         x = 200 + row * 330
         ix = to(lb, rt, f"expr min(max(dmxsel - 1, 0), max(dmxcount - 3, 0)) + {row}", x, 350, outlet=3 - row)
