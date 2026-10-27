@@ -10,10 +10,6 @@ Copy a folder into the Organelle's `Patches` folder (USB stick or SD card).
 | Patch | What it is |
 |---|---|
 | **DM48 Engine** | The main project. An 8-voice MPE breath synth host with plug-in engines (Volt, Halo, Under, Velvet, Steel, Lyra). Includes an MPE MIDI looper (reverse/speed), a breath arpeggiator, delay, an FDN reverb with freeze and a limiter, MIDI echo and clock with tap tempo, 78 scales in 10 families (just intonation, world tunings) and a DM48X tuning librarian. Manual: `docs/DM48 Engine Manual.pdf`. |
-| MPE Reed | First MPE breath patch (PLAY-style). |
-| MPE Super | Electronic, Colossus-style MPE patch. |
-| MPE Super JI A / Bb / C / D | MPE Super in just intonation in four keys. |
-| DM48X Tunings | Standalone tuning-table sender for the DM48X (`.mid` files). |
 
 ## Source (`tools/`)
 
@@ -24,7 +20,6 @@ The patches are **generated** by Python scripts, so they can be rebuilt and test
   - `gen_all.py` assembles the patch; `gen_engines.py` holds the engines and `engines/README.txt` (the engine contract); `sec_*.py` are the host sections (MIDI, keys, looper, UI, library, audio FX, MIDI out, arpeggiator, OLED); `make_scales.py` and `astral_scales.json` hold the scale data.
   - Tests: `t_*.py` with `harness.py`, which runs the patch offline in Pd with timed events and records audio. `tload.sh` is a quick load check.
   - `gen_hybrid.py` is a **work in progress** (Hybrid engine, see NOTES.md).
-- `tools/early-patches/`: generators for MPE Reed, MPE Super, the DM48X Tunings sender and the tuning `.mid` files.
 
 Requirements for building and testing: Python 3, numpy, Pure Data 0.53+ (`pd -batch`), and Chromium for the manual PDF.
 

@@ -18,10 +18,6 @@ pack() {   # pack NAME folder...
 }
 
 pack DM48_Engine   "DM48 Engine"
-pack MPE_Reed      "MPE Reed"
-pack MPE_Super     "MPE Super"
-pack MPE_Super_JI  "MPE Super JI A" "MPE Super JI Bb" "MPE Super JI C" "MPE Super JI D"
-pack DM48X_Tunings "DM48X Tunings"
 cp "docs/DM48 Engine Manual.pdf" "$DIST/DM48_Engine_Manual-${VERSION}.pdf"
 rm -rf "$STAGE"
 ls -l "$DIST"

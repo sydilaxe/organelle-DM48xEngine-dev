@@ -84,7 +84,6 @@ jobs:
 
           - **DM48_Engine-$v.zip**: the DM48 Engine patch (breath synth host, MIDI and audio loopers, DM48X tuning library)
           - **DM48_Engine_Manual-$v.pdf**: the manual
-          - **MPE_Reed**, **MPE_Super**, **MPE_Super_JI** (A, Bb, C, D) and **DM48X_Tunings**: the earlier patches
 
           Built from source and tested offline in Pure Data by the release workflow.
           EOF
