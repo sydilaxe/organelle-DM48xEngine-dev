@@ -426,7 +426,7 @@ input — not yet on an Organelle with a DM48X. Sounds, levels and CPU will need
 <h2 class="pb">Appendix A: scales (TUNE page)</h2>
 {scale_html}
 <h2 class="pb">Appendix B: DM48X tunings included</h2>
-<p>Holes 1–12 left to right; middle C = C4 = MIDI 60. Use the four <i>Richter Low</i> tunings with Tuning = Just and Key set to the same key.</p>
+<p>Holes 1–12 left to right; middle C = C4 = MIDI 60. Groups: <i>Richter Low</i>, <i>Country</i>, <i>Paddy Richter</i> and <i>Harmonic Minor</i> are diatonic harps in the low octave (slider = +1 octave; Richter Low in all 12 keys); <i>Chromatic</i> tunings use the slider for the semitone above, like a chromatic harmonica; <i>Ambient</i> tunings are open, chordal layouts; <i>World</i> tunings walk a scale (blow, then draw one step up). A name ending in a key sets the TUNE Key when sent: choose Just (or the matching world scale, e.g. Pelog or Slendro) on the TUNE page for the true pitches.</p>
 <div>{tun_html}</div>
 </body></html>"""
 
