@@ -11,7 +11,9 @@ Inlets (left to right) - each receives "value ms" pairs, ready for [line~]:
   1 pitch    MIDI note number, fractional (bends, tuning and octave already included)
   2 level    0..1 - breath (or velocity), already curved. 0 with the release time at note-off.
   3 timbre   0..1, 0.5 = neutral (MPE CC74 / slide)
-  (A pitch message with time 0 marks the start of a new note - e.g. pluck a string on it.)
+  (A pitch message with time 0 marks the start of a new note - e.g. reset a phase or pluck on it.
+   With glide (VOICE page) a new note sends "source 0" then "pitch glide-ms"; a legato change in
+   Mono mode only sends "pitch glide-ms": no new attack.)
 Outlet: one [outlet~], mono.
 
 Shared values you can read anywhere in the engine:
@@ -284,20 +286,27 @@ def velvet(path):
 def steel(path):
     """pedal steel: a waveguide string (after Steelie by gur_shulman, WTFPL) played by breath"""
     e = Canvas(w=1200, h=900)
-    e.comment("Steel - pedal steel string (waveguide, after Steelie by gur_shulman). Each note plucks; breath is the "
-              "volume pedal, brightens the string and (Bow) keeps it ringing. Knobs: Tone, Sustain, Steel, Bow", 20, 5)
+    e.comment("Steel - pedal steel string (waveguide, after Steelie by gur_shulman), bowed by breath: no pluck. "
+              "Breath is the volume pedal and the bow, and brightens the string. Knobs: Tone, Sustain, Steel, Attack "
+              "(how fast the breath swells in: 5 ms .. 2 s)", 20, 5)
     ip, il, it = e.obj("inlet", 20, 30), e.obj("inlet", 300, 30), e.obj("inlet", 500, 30)
-    pt = e.obj("t a a", 20, 55)
-    e.c(ip, 0, pt, 0)
     pl = e.obj("line~", 20, 105)
-    e.c(pt, 0, pl, 0)
-    # a pitch message with time 0 = a new note: pluck
-    up = e.obj("unpack 0 0", 120, 80)
-    e.c(pt, 1, up, 0)
-    pluck = e.obj("sel 0", 120, 105)
-    e.c(up, 1, pluck, 0)
-    env = e.obj("line~", 300, 55)
-    e.c(il, 0, env, 0)
+    e.c(ip, 0, pl, 0)
+    # breath attack: a rising level ramps over at least the Attack time (falling and note-off keep their own time)
+    lu = e.obj("unpack 0 0", 300, 55)
+    e.c(il, 0, lu, 0)
+    atk = e.obj("expr if($f1 > $f3, max($f2, 5 + $f4 * $f4 * 2000), $f2)", 300, 105)
+    e.c(lu, 1, atk, 1)
+    lt = e.obj("t f f", 300, 80)
+    e.c(lu, 0, lt, 0)
+    e.c(lt, 1, atk, 0)
+    e.c(e.obj("r $1-p4", 560, 80), 0, atk, 3)
+    lpk = e.obj("pack 0 0", 300, 130)
+    e.c(atk, 0, lpk, 1)
+    e.c(lt, 0, lpk, 0)
+    e.c(lt, 0, atk, 2)
+    env = e.obj("line~", 300, 155)
+    e.c(lpk, 0, env, 0)
     tb = e.obj("line~", 500, 55)
     e.c(it, 0, tb, 0)
     p1, p2, p3, p4, bamt = (e.obj(f"r~ {n}", 650 + i * 90, 30) for i, n in
@@ -314,17 +323,10 @@ def steel(path):
     dl = ex(e, "max(0.37, $v1 - ($v2 / (1 + $v2) + (1 + $v3) / (1 - $v3)) * $v4)", [per, dmp, disp, sr], 20, 260)
     t60 = ex(e, "1.2 + $v1 * $v1 * 11 + $v2 * 3", [p2, eb], 650, 230)
     g = ex(e, "exp(-6.9078 * $v1 / 1000 / $v2) / (1 + $v3)", [per, t60, dmp], 650, 260)
-    # excitation: pluck burst + breath bow
-    burst = e.obj("vline~", 120, 155)
-    pm = e.msg("1, 0 4", 120, 130)
-    e.c(pluck, 0, pm, 0)
-    e.c(pm, 0, burst, 0)
+    # excitation: the breath bow (band-passed noise), stronger as you blow harder
     nz = e.obj("noise~", 850, 300)
-    pk = mul(e, nz, burst, 850, 330)
-    pkf = chain(e, pk, ["lop~ 3500", "*~ 0.7"], 850, 355)
-    bow = ex(e, "$v1 * $v1 * $v2 * 0.035", [eb, p4], 1000, 330)
-    bw = chain(e, mul(e, nz, bow, 1000, 360), ["bp~ 800 1"], 1000, 385)
-    exc = add(e, pkf, bw, 850, 420)
+    bow = ex(e, "($v1 * 0.5 + $v1 * $v1 * 0.5) * 0.03", [eb], 1000, 330)
+    exc = chain(e, mul(e, nz, bow, 1000, 360), ["bp~ 800 1"], 1000, 385)
     pos = ex(e, "$v1 * (0.1 + $v2 * 0.12)", [per, p3], 450, 290)
     # the string, in 16-sample blocks so short (high) delays work
     s = Canvas("string", w=700, h=450)
@@ -427,7 +429,7 @@ ENGINES = {
     "halo": (halo, "Shimmer Resonance Air Bloom", "0.5 0.5 0.35 0.5"),
     "under": (under, "Subs Drive Tone Octave", "0.5 0.3 0.4 0.4"),
     "velvet": (velvet, "Cutoff Spread Swell Warmth", "0.5 0.5 0.5 0.4"),
-    "steel": (steel, "Tone Sustain Steel Bow", "0.55 0.5 0.35 0.4"),
+    "steel": (steel, "Tone Sustain Steel Attack", "0.55 0.5 0.35 0.3"),
     "lyra": (lyra, "Mod Sharp Detune Drive", "0.3 0.25 0.35 0.3"),
 }
 

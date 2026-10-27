@@ -18,9 +18,9 @@ def oled():
     o.c(msg_to(o, fr, "/oled/gFillArea 3 0 0 128 8 0", 600, 160, outlet=5), 0, out, 0)
     # 4: page tabs (outline each, fill the current one)
     tabs = to(o, fr, "t b b", 450, 160, outlet=4)
-    for i in range(7):
-        o.c(msg_to(o, tabs, f"/oled/gBox 3 {i * 6} 1 5 5 1", 450 + i * 20, 185 + (i % 2) * 20, outlet=1), 0, out, 0)
-    o.c(msg_to(o, to(o, tabs, "expr engpage * 6", 450, 230), "/oled/gFillArea 3 $1 1 5 5 1", 450, 255), 0, out, 0)
+    for i in range(8):
+        o.c(msg_to(o, tabs, f"/oled/gBox 3 {i * 5} 1 4 5 1", 450 + i * 20, 185 + (i % 2) * 20, outlet=1), 0, out, 0)
+    o.c(msg_to(o, to(o, tabs, "expr engpage * 5", 450, 230), "/oled/gFillArea 3 $1 1 4 5 1", 450, 255), 0, out, 0)
     # 3: loop bar 46..93
     lpb = to(o, fr, "t b b b", 200, 300, outlet=3)
     to(o, lpb, "s $0-cur", 300, 325, outlet=2)

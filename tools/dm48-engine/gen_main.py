@@ -20,7 +20,7 @@ def build(out_dir):
     m.comment("Keys: see README.txt. Aux / footswitch: tap = rec > play > overdub > play ... hold = clear.", 20, 39)
     y = 90
     for nm, size in ((BEND, NCH), (JUST, 12), ("englheld", NCH * 128), ("engkeyon", NCH * 128), ("englive", 17 * 128),
-                     ("dmxb", MAXBYTES), ("dmxt", MAXEV), ("dmxs", MAXEV), ("dmx1", MAXEV), ("dmx2", MAXEV)):
+                     ("engpbuf", 16), ("engpbuft", 16), ("engpbufh", 16), ("dmxb", MAXBYTES), ("dmxt", MAXEV), ("dmxs", MAXEV), ("dmx1", MAXEV), ("dmx2", MAXEV)):
         m.obj(f"array define {nm} {size}", 700, y)
         y += 22
     m.obj(f"array define engscales {NSCALES * 12}", 700, 60)
@@ -31,13 +31,13 @@ def build(out_dir):
     scl = m.msg("; engscales 0 " + " ".join(str(round(v, 4)) for v in SCALE_TABLE)
                 + "; engfamstart 0 " + " ".join(map(str, FAM_START)) + "; engfamcount 0 " + " ".join(map(str, FAM_COUNT))
                 + "; engfamof 0 " + " ".join(map(str, FAM_OF)), 700, 40)
-    for nm in ("englp", "engfiles", "engdirs", "englist", "engparams", "engdesc", "engarp", "engscalenames"):
+    for nm in ("englp", "engfiles", "engdirs", "engmono", "englist", "engparams", "engdesc", "engarp", "engscalenames"):
         m.obj(f"text define {nm}", 700, y)
         y += 22
     y = 90
     vals = ("engmode engcurve engnr enggr engpage englstate engllen engltop engldub engli englnum englpos "
             "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engrxmute engrsize engfreeze engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engcombok engtunidx enggn enggv "
-            "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey dmxndirs dmxdir dmxk1").split()
+            "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey dmxndirs dmxdir dmxk1 engnheld englastp engglide enggwhen enggfrom engvmode engmvel engmkey engmcur engpidx engsP engnow engsbd engsbp engslt engslp").split()
     vals = vals + sec_aloop.VALUES
     for i, nm in enumerate(vals):
         m.obj(f"value {nm}", 950 + (i // 18) * 150, 90 + (i % 18) * 22)

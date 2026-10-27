@@ -3,7 +3,7 @@ from pdgen import Canvas
 from gen_voice import JUST
 from sec_core import chain, to, msg_to, setv, NOTE_NAMES
 
-PAGES = ["PLAY", "SHAPE", "FX", "SETUP", "TUNE", "ENGINE", "LIBRARY"]
+PAGES = ["PLAY", "SHAPE", "FX", "SETUP", "TUNE", "ENGINE", "LIBRARY", "VOICE"]
 P = {n: i for i, n in enumerate(PAGES)}
 LIB = P["LIBRARY"]
 
@@ -34,7 +34,7 @@ def handler(c, x, y, entry, default, apply_objs, disp_objs, disp_msg, page, bar=
 REL_CUR = {(0, 1): "engpv1", (0, 2): "engpv2", (0, 3): "engpv3", (0, 4): "engpv4",
            (1, 1): "engcurbamt", (1, 2): "engcurbody", (1, 3): "engcurrelease",
            (2, 1): "engcurdtime", (2, 2): "engcurdfb", (2, 3): "engcurdmix", (2, 4): "engcurrmix",
-           (5, 3): "engcurlevel"}
+           (5, 3): "engcurlevel", (7, 2): "engcurglide"}
 
 
 def knob_map(c, page, k, objs, dest, x, y):
@@ -78,6 +78,10 @@ for _fi, (_f, _ns) in enumerate(FAMILIES):
 SAVED = ["bamt", "body", "release", "curve", "dtime", "dfb", "dmix", "rmix",
          "octave", "noterange", "globrange", "vibrate", "tuning", "key", "mode", "level", "mout", "beat"]
 DEFAULTS = [0.6, 0.3, 0.3, 1, 0.45, 0.4, 0.2, 0.35, 0, 48, 2, 5.5, 1, 0, 0, 0.6, 2, 500]
+# saved after the engine name, so a settings.txt from an older version still loads (these keep their defaults)
+SAVED_TAIL = ["vmode", "glide", "gwhen", "gfrom"]
+DEFAULTS_TAIL = [0, 0, 0, 0]
+DEFAULT_LINE = " ".join(str(d) for d in DEFAULTS) + " velvet " + " ".join(str(d) for d in DEFAULTS_TAIL)
 
 
 def ui():
@@ -314,6 +318,26 @@ def ui():
     u.c(msg_to(u, dt, "0", 900, Y + 125, outlet=1), 0, dirty, 1)
     u.c(dt, 0, la, 0)
     to(u, to(u, la, "list prepend 4", 700, Y + 125), "s $0-disp5", 700, Y + 150)
+    # ---- VOICE: 1 Poly/Mono (legato), 2 Glide time, 3 glide Always/Legato only, 4 glide from Voice/Last note
+    Y = 1760
+    def choice(k, nm, labels, vname, x):
+        knob_map(u, 7, k, ["> 0.5"], f"$0-{nm}", x, Y - 75)
+        f = u.obj("f 0", x, Y + 25)
+        u.c(u.obj(f"r $0-{nm}", x, Y), 0, f, 0)
+        u.c(u.obj("r $0-refresh7", x + 70, Y), 0, f, 0)
+        t = to(u, f, "t f f f", x, Y + 50)
+        to(u, t, f"s eng-{nm}", x + 100, Y + 100, outlet=1)
+        to(u, t, f"v {vname}", x + 200, Y + 75, outlet=2)
+        sl = to(u, t, "sel 0 1", x, Y + 75)
+        for i, lab in enumerate(labels):
+            to(u, msg_to(u, sl, f"{k} {lab}", x + i * 90, Y + 100, outlet=i), "s $0-disp7", x, Y + 150)
+    choice(1, "vmode", ("Poly", "Mono legato"), "engvmode", 20)
+    choice(3, "gwhen", ("Glide always", "Glide legato"), "enggwhen", 460)
+    choice(4, "gfrom", ("From nearest", "From last"), "enggfrom", 680)
+    to(u, u.obj("r $0-k2p7", 240, Y - 50), "s $0-glide", 240, Y - 25)
+    handler(u, 240, Y, "$0-glide", 0, ["expr int($f1 * $f1 * 2000)", "v engglide"],
+            ["expr int($f1 * $f1 * 2000)"], "2 Glide $1ms", 7)
+    to(u, u.obj("r $0-glide", 240, Y + 250), "v engcurglide", 240, Y + 275)
     return u
 
 
@@ -332,18 +356,21 @@ def settings():
     s.c(chain(s, ets, ["text size engparams", "> 0"], 460, 155, outlet=1), 0, eg, 1)
     s.c(ets, 0, eg, 0)
     msg_to(s, eg, "; engparams write $1/engines.txt", 400, 205)
-    tb = to(s, svt, "t " + " ".join(["b"] * (n + 1)), 20, 130)
-    pk = s.obj("pack " + " ".join(["0"] * n) + " s", 20, 200)
-    for i, nm in enumerate(SAVED):
-        v = to(s, tb, f"v $0-sv-{nm}", 20 + i * 70, 160, outlet=i)   # first value fires last (hot inlet)
-        s.c(v, 0, pk, i)
-        rr = s.obj(f"r $0-{nm}", 20 + i * 70, 300)
-        to(s, rr, f"v $0-sv-{nm}", 20 + i * 70, 325)
-        to(s, rr, f"v engcur{nm}", 20 + i * 70, 350)
+    m = len(SAVED_TAIL)
+    ALL = SAVED + SAVED_TAIL
+    tb = to(s, svt, "t " + " ".join(["b"] * (n + 1 + m)), 20, 130)
+    pk = s.obj("pack " + " ".join(["0"] * n) + " s " + " ".join(["0"] * m), 20, 200)
+    for i, nm in enumerate(ALL):
+        j = i if i < n else i + 1                        # pack slot (the engine name sits at n)
+        v = to(s, tb, f"v $0-sv-{nm}", 20 + j * 70, 160, outlet=j)   # first value fires last (hot inlet)
+        s.c(v, 0, pk, j)
+        rr = s.obj(f"r $0-{nm}", 20 + j * 70, 300)
+        to(s, rr, f"v $0-sv-{nm}", 20 + j * 70, 325)
+        to(s, rr, f"v engcur{nm}", 20 + j * 70, 350)
     cur = to(s, tb, "symbol", 20 + n * 70, 160, outlet=n)
     s.c(s.obj("r $0-curname", 20 + n * 70, 135), 0, cur, 1)
     s.c(cur, 0, pk, n)
-    dl = " ".join(f"${i + 2}" for i in range(n + 1))
+    dl = " ".join(f"${i + 2}" for i in range(n + 1 + m))
     tf = s.obj("textfile", 20, 275)
     df = s.obj("list prepend", 20, 225)
     s.c(svt, 1, df, 1)
@@ -352,7 +379,7 @@ def settings():
     # auto-save: any saved value, engine or engine knob changes -> wait 2 s -> write into the patch folder
     ad = s.obj("delay 2000", 800, 420)
     ag = s.obj("spigot", 800, 395)
-    for j, rcv in enumerate(["$0-" + nm for nm in SAVED] + ["$0-curname", "$0-pstore"]):
+    for j, rcv in enumerate(["$0-" + nm for nm in SAVED + SAVED_TAIL] + ["$0-curname", "$0-pstore"]):
         s.c(s.obj(f"r {rcv}", 800 + (j % 10) * 60, 330 + (j // 10) * 22), 0, ag, 0)
     s.c(msg_to(s, to(s, s.obj("loadbang", 1100, 330), "delay 6000", 1100, 355), "1", 1100, 380), 0, ag, 1)
     s.c(to(s, ag, "t b", 800, 410), 0, ad, 0)          # (values and the engine name both just restart the timer)
@@ -361,14 +388,16 @@ def settings():
     s.c(pdc, 0, dest, 0)
     # load: [s $0-loadsettings] bang; missing file -> defaults
     lt = chain(s, s.obj("r $0-loadsettings", 20, 380), ["t b b"], 20, 405)
-    dmsg = s.msg(" ".join(str(d) for d in DEFAULTS) + " velvet", 120, 455)   # only when there is no settings file
+    dmsg = s.msg(DEFAULT_LINE, 120, 455)   # only when there is no settings file
     rd = msg_to(s, lt, "read settings.txt, rewind, bang", 20, 430)
     s.c(rd, 0, tf, 0)
-    lu = s.obj("unpack " + " ".join(["0"] * n) + " s", 20, 480)
+    lu = s.obj("unpack " + " ".join(["0"] * n) + " s " + " ".join(["0"] * m), 20, 480)
     s.c(dmsg, 0, lu, 0)
     s.c(tf, 0, lu, 0)
     s.c(tf, 1, dmsg, 0)
     for i, nm in enumerate(SAVED):
         to(s, lu, f"s $0-{nm}", 20 + i * 70, 505 + (i % 2) * 22, outlet=i)
     to(s, lu, "s $0-engsel-name", 20 + n * 70, 505, outlet=n)
+    for j, nm in enumerate(SAVED_TAIL):
+        to(s, lu, f"s $0-{nm}", 20 + (n + 1 + j) * 70, 505, outlet=n + 1 + j)
     return s

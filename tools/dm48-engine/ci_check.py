@@ -162,6 +162,17 @@ x = audio(P).mean(1)
 cl = hf_clicks(x, 3.7, 14.9)
 check("no clicks in audio overdubs or at the loop seam", not cl, f"clicks at {cl[:5]}" if cl else "")
 
+# 9. glide and legato (VOICE page)
+from t_glide import glide_tests
+g = glide_tests(P)
+mid = lambda tr, i: tr[i] if tr[i] is not None else 0
+check("poly glide (A3 -> A4 over 0.5 s)", 61 < mid(g["poly"], 12) < 65 and abs(mid(g["poly"], 40) - 68.9) < 0.3,
+      f"at 0.24 s {mid(g['poly'], 12)}")
+check("glide legato-only: no glide without overlap", abs(mid(g["gap"], 5) - 68.9) < 0.3)
+check("mono legato glides up and back", 61 < mid(g["mono"], 37) < 65 and abs(mid(g["mono"], 60) - 68.9) < 0.3
+      and 61 < mid(g["mono"], 87) < 65 and abs(mid(g["mono"], 120) - 56.9) < 0.3,
+      f"{mid(g['mono'], 37)} {mid(g['mono'], 60)} {mid(g['mono'], 87)} {mid(g['mono'], 120)}")
+
 print()
 if failures:
     print(f"{len(failures)} check(s) failed: {', '.join(failures)}")

@@ -8,8 +8,8 @@ def run(patchdir, events, wav="h.wav", extra_prints=()):
     """events: list of (time_ms, 'receiver args')"""
     d = os.path.join(patchdir)
     # reset settings (auto-save writes into the patch folder during a run)
-    from sec_ui import DEFAULTS
-    open(os.path.join(d, "settings.txt"), "w").write(" ".join(str(x) for x in DEFAULTS) + " velvet;\n")
+    from sec_ui import DEFAULT_LINE
+    open(os.path.join(d, "settings.txt"), "w").write(DEFAULT_LINE + ";\n")
     open(os.path.join(d, "engines.txt"), "w").write("")
     ev = sorted(events, key=lambda e: e[0])
     out, prev = [], 0

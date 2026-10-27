@@ -7,7 +7,9 @@ Inlets (left to right) - each receives "value ms" pairs, ready for [line~]:
   1 pitch    MIDI note number, fractional (bends, tuning and octave already included)
   2 level    0..1 - breath (or velocity), already curved. 0 with the release time at note-off.
   3 timbre   0..1, 0.5 = neutral (MPE CC74 / slide)
-  (A pitch message with time 0 marks the start of a new note - e.g. pluck a string on it.)
+  (A pitch message with time 0 marks the start of a new note - e.g. reset a phase or pluck on it.
+   With glide (VOICE page) a new note sends "source 0" then "pitch glide-ms"; a legato change in
+   Mono mode only sends "pitch glide-ms": no new attack.)
 Outlet: one [outlet~], mono.
 
 Shared values you can read anywhere in the engine:

@@ -87,6 +87,12 @@ This is the working memory for this project: read it first in any new session.
   - Nothing is created while playing. On the Organelle, creating objects while DSP runs (the old dynamic slots and the morph) made Pd rebuild its DSP graph, and that popped.
   - Engines get the argument `eng`, so `[r~ $1-p1~]` means `eng-p1~`.
 - **Panic (low D#)** sends `eng-panic`: notes off, both loopers stopped (kept), freeze, wet-only and arp off, and every `delwrite~` in the FX cleared.
+- **VOICE page (low F#): legato and glide.**
+  - Mono legato bypasses `[poly]`: the `mono` subpatch in `process` keeps a stack of held keys (`engmono`) and sends voice 1 "key -1" for a legato change (velocity < 0 = no new attack, glide to the new key's pitch). Releasing it goes back to the top of the stack.
+  - Glide: every note start goes into a 16-entry buffer (`engpbuf` pitch, `engpbuft` time, `engpbufh` held). A new note searches notes started > 30 ms ago and glides from the nearest one (+1 semitone per second of age, so the last chord wins) or the latest one (From last). Glide legato = only held notes. `[poly]` is round-robin, so a per-voice "last pitch" doesn't work for chord glides.
+  - The engine gets "source 0" then "pitch ms". A bend during a glide uses the remaining glide time.
+  - VOICE values are saved after the engine name in settings.txt (`SAVED_TAIL`), so older settings files still load.
+- **Steel** has no pluck: breath is the bow. Knob 4 Attack = minimum rise time of the breath level (5 ms – 2 s).
 - **Voice allocation:** one voice per key. A repeated note-on first releases the key, and orphan note-offs are dropped (`engkeyon`). This fixed stuck notes after clearing the looper.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).
 - **Settings:** defaults are used only when `settings.txt` is missing. The harness resets settings before each test run, because auto-save writes into the patch folder.

@@ -10,7 +10,7 @@ SETUP
  4. Load DM48 Engine. (Plugged in later? Reload the patch.)
 
 KEYS  (the Organelle keyboard is a control surface; play the DM48X)
- Low octave:  C PLAY  C# LIBRARY  D SHAPE  D# panic  E FX  F SETUP  G TUNE  A ENGINE
+ Low octave:  C PLAY  C# LIBRARY  D SHAPE  D# panic  E FX  F SETUP  F# VOICE  G TUNE  A ENGINE
               A# loop undo   B loop stop/start
  High octave: C freeze  C# delay throw (hold)  D octave down  D# octave up  E wet only
               F tap tempo  F# arpeggiator  G arp permutations
@@ -36,6 +36,7 @@ PAGES (knobs 1-4)
  TUNE    Family, Scale (78 scales in 10 families: Western, Temperament, Gamelan, African,
          Japanese, Chinese, SE-Asian, Maqam, Indian, Byzantine), Key. Scales retune each note.
  ENGINE  Engine, MIDI MPE/Standard, Level, MIDI out (Off / Echo / Echo+Clock); line 4 = MIDI in
+ VOICE   Poly / Mono legato, Glide 0-2 s, Glide always / legato only, From nearest (poly glide) / last
  LIBRARY Knob 2 picks a folder (All, Ambient, Chromatic, Richter, World), knob 1 a tuning, Aux sends it (DM48X: Tuning editor > Receive tuning)
 
 SCREEN
@@ -48,7 +49,7 @@ ENGINES (engines/ folder; add your own - see engines/README.txt)
  halo   ethereal/resonant Shimmer Resonance Air Bloom
  under  bass/subharmonic  Subs Drive Tone Octave
  velvet lush VA pad       Cutoff Spread Swell Warmth
- steel  pedal steel string Tone Sustain Steel Bow
+ steel  pedal steel string Tone Sustain Steel Attack
  lyra   LIRA-8 drone voice Mod Sharp Detune Drive
 
 Steel is after Steelie by gur_shulman (WTFPL); Lyra is after LIRA-8 by Miguel Moreno (BSD licence).

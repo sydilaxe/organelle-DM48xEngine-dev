@@ -1,3 +1,4 @@
+import os
 """Shared helpers and the input / processing sections."""
 from pdgen import Canvas
 from gen_voice import BEND, JUST
@@ -86,7 +87,7 @@ def keys():
     A key acts when RELEASED, unless a knob was turned while holding it (then the knob did a combo).
     Delay Throw acts while held."""
     ky = Canvas("keys", w=1500, h=800)
-    ky.comment("Low octave: C play  C# library  D shape  D# panic  E fx  F setup  G tune  A engine  A# loop undo  B loop stop/start", 20, 5)
+    ky.comment("Low octave: C play  C# library  D shape  D# panic  E fx  F setup  F# voice  G tune  A engine  A# loop undo  B loop stop/start", 20, 5)
     ky.comment("High octave: C reverb freeze  C# delay throw (hold)  D octave down  D# octave up  E wet only  F tap tempo  F# arpeggiator  G breath permutations", 20, 22)
     ky.comment("Hold + turn a knob: B = loop speed/direction  C = reverb size  C# = throw feedback  E = reverb amount  F = tempo", 20, 39)
     ku = chain(ky, ky.obj("r notesRaw", 20, 70), ["unpack 0 0"], 20, 95)
@@ -118,6 +119,7 @@ def keys():
     to(ky, msg_to(ky, to(ky, rl, "sel 73", 450, 225), "0", 450, 250), "s eng-throw", 450, 275)
     fsel = to(ky, act, "sel 60 61 62 63 64 65 67 69 70 71 72 74 75 76 77 78 79 80 81 82 83", 250, 330)
     spage = ky.obj("s eng-page", 250, 420)
+    ky.c(msg_to(ky, to(ky, act, "sel 66", 150, 330), "7", 150, 360), 0, spage, 0)   # low F#: VOICE
     for i, pg in ((0, 0), (1, 6), (2, 1), (4, 2), (5, 3), (6, 4), (7, 5)):
         ky.c(msg_to(ky, fsel, str(pg), 250 + i * 30, 360, outlet=i), 0, spage, 0)
     # PANIC: everything silent without losing anything - notes off, loops stopped (kept), freeze / throw / arp off,
@@ -282,23 +284,82 @@ def process():
     kpk = pr.obj("pack 0 0", 20, 255)
     pr.c(kv, 1, kpk, 1)
     pr.c(kv, 0, kpk, 0)
-    kt = to(pr, kpk, "t a a a", 20, 280)
+    kt = to(pr, kpk, "t a a a a", 20, 280)
     poly = pr.obj(f"poly {NVOICES} 1", 20, 350)
-    rtg = chain(pr, kt, ["expr if(($f2 > 0) && (engkeyon[$f1] > 0), $f1, -1)", "moses 0"], 300, 305, outlet=2)
-    pr.c(msg_to(pr, rtg, "$1 0", 340, 330, outlet=1), 0, poly, 0)
+    vin = pr.obj("t a", 20, 337)                           # to [poly] (Poly) or the mono/legato handler (Mono)
+    rtg = chain(pr, kt, ["expr if(($f2 > 0) && (engkeyon[$f1] > 0), $f1, -1)", "moses 0"], 300, 305, outlet=3)
+    pr.c(msg_to(pr, rtg, "$1 0", 340, 330, outlet=1), 0, vin, 0)
     pg = pr.obj("spigot", 120, 325)
-    pr.c(to(pr, kt, "expr ($f2 > 0) || (engkeyon[$f1] > 0)", 160, 305, outlet=1), 0, pg, 1)
-    pr.c(kt, 1, pg, 0)
-    pr.c(pg, 0, poly, 0)
+    pr.c(to(pr, kt, "expr ($f2 > 0) || (engkeyon[$f1] > 0)", 160, 305, outlet=2), 0, pg, 1)
+    pr.c(kt, 2, pg, 0)
+    pr.c(pg, 0, vin, 0)
+    # keys held before this one (the voice reads it for "glide only when legato")
+    to(pr, to(pr, kt, "expr max(0, engnheld + (($f2 > 0) && (engkeyon[$f1] == 0)) - (($f2 == 0) && (engkeyon[$f1] > 0)))",
+              650, 280, outlet=1), "v engnheld", 650, 305)
     tabwrite_pair(pr, "$f1; $f2 > 0", "engkeyon", 500, 305, kt, outlet=0)
     ano = pr.obj("r eng-allnotesoff", 150, 300)
     pr.c(ano, 0, poly, 0)
-    msg_to(pr, ano, "; engkeyon const 0", 600, 330)
+    msg_to(pr, ano, "; engkeyon const 0; engpbufh const 0", 600, 330)
+    setv(pr, ano, "engnheld", 0, 700, 330)
     vp = pr.obj("pack 0 0 0", 20, 375)
     for k in range(3):
         pr.c(poly, k, vp, k)
     cl = to(pr, vp, f"clone -s 1 voice {NVOICES}", 20, 400)
     to(pr, cl, "s~ eng-dry", 20, 425)
+    gp_ = pr.obj("spigot 1", 20, 345)
+    gm_ = pr.obj("spigot 0", 200, 345)
+    pr.c(vin, 0, gp_, 0)
+    pr.c(vin, 0, gm_, 0)
+    pr.c(gp_, 0, poly, 0)
+    vmt = chain(pr, pr.obj("r eng-vmode", 1100, 20), ["change -1", "t f f b"], 1100, 45)
+    to(pr, msg_to(pr, vmt, "stop", 1250, 95, outlet=2), "s eng-allnotesoff", 1250, 120)   # switching: all notes off
+    pr.c(to(pr, vmt, "== 0", 1100, 95, outlet=1), 0, gp_, 1)
+    pr.c(vmt, 0, gm_, 1)
+    # ---- Mono (legato): one voice; held keys are a stack. A new key while one sounds moves the voice there
+    # (velocity -1 = legato: no new attack, glides by Glide); releasing it goes back to the last key still held.
+    mo = Canvas("mono", w=900, h=520)
+    mi = chain(mo, mo.obj("inlet", 20, 20), ["unpack 0 0"], 20, 45)
+    to(mo, mi, "v engmvel", 120, 70, outlet=1)                # velocity first
+    mkt = to(mo, mi, "t f f", 20, 70)
+    to(mo, mkt, "v engmkey", 70, 95, outlet=1)
+    onoff = chain(mo, mkt, ["expr engmvel > 0", "sel 1 0"], 20, 95)
+    mout = mo.obj("outlet", 20, 495)
+    # on
+    ont = to(mo, onoff, "t b b b", 20, 145)
+    to(mo, to(mo, ont, "expr engmkey", 250, 170, outlet=2), "text insert engmono 1e+06", 250, 195)
+    onx = to(mo, ont, "expr engmkey; if(engmcur >= 0, -1, engmvel)", 100, 195, outlet=1)
+    onp = mo.obj("pack 0 0", 100, 220)
+    mo.c(onx, 1, onp, 1)
+    mo.c(onx, 0, onp, 0)
+    mo.c(msg_to(mo, onp, "1 $1 $2", 100, 245), 0, mout, 0)
+    to(mo, to(mo, ont, "expr engmkey", 20, 195), "v engmcur", 20, 220)
+    # off
+    oft = to(mo, onoff, "t b b", 450, 145, outlet=1)
+    to(mo, chain(mo, oft, ["expr engmkey", "text search engmono", "moses 0"], 550, 170, outlet=1),
+       "text delete engmono", 550, 245, outlet=1)
+    nxt = chain(mo, oft, ["expr engmkey == engmcur", "sel 1", "text size engmono", "moses 1"], 450, 170)
+    stp = to(mo, nxt, "t b b", 450, 295)
+    mo.c(chain(mo, stp, ["expr engmcur", "list prepend 1", "list append 0"], 520, 320, outlet=1), 0, mout, 0)
+    to(mo, msg_to(mo, stp, "-1", 450, 320), "v engmcur", 450, 345)
+    back = chain(mo, nxt, ["- 1", "text get engmono", "t f f"], 700, 295, outlet=1)
+    mo.c(msg_to(mo, back, "1 $1 -1", 750, 370, outlet=1), 0, mout, 0)
+    to(mo, back, "v engmcur", 700, 370)
+    # all notes off (and at load): release the sounding key, empty the stack
+    ma = to(mo, mo.obj("r eng-allnotesoff", 700, 20), "t b b", 700, 45)
+    mcm = chain(mo, ma, ["expr engmcur", "moses 0"], 760, 70, outlet=1)
+    mo.c(chain(mo, to(mo, mcm, "list prepend 1", 760, 120, outlet=1), ["list append 0"], 760, 145), 0, mout, 0)
+    lm = mo.obj("t b b", 650, 95)
+    mo.c(ma, 0, lm, 0)
+    mo.c(mo.obj("loadbang", 650, 70), 0, lm, 0)
+    msg_to(mo, lm, "; engmono clear", 720, 120, outlet=1)
+    lmv = msg_to(mo, lm, "-1", 650, 120)
+    to(mo, lmv, "v engmcur", 650, 145)
+    to(mo, lmv, "v englastp", 720, 145)
+    msub = pr.sub(mo, 200, 375)
+    pr.c(gm_, 0, msub, 0)
+    pr.c(msub, 0, cl, 0)
+    if os.environ.get("DBG"):
+        pr.c(msub, 0, pr.obj("print MONO", 300, 400), 0)
     # ---- bend: "ch value" -> semitones in the table, then tell voices which channel moved
     bu = to(pr, rt, "unpack 0 0", 400, 170, outlet=1)
     bx = pr.obj(f"expr ($f2 - 8192) / 8192 * if($f1 == 17 * int($f1 / 17) + 1, enggr, engnr)", 400, 250)

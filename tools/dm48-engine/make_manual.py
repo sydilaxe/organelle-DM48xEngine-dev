@@ -19,7 +19,7 @@ def shot(name, cap, w=256):
 # ---------------------------------------------------------------- Organelle M (grey), stylised
 WHITE = ["C", "D", "E", "F", "G", "A", "B"]
 LOW = {"C": "PLAY", "C#": "LIBRARY", "D": "SHAPE", "D#": "PANIC", "E": "FX", "F": "SETUP", "G": "TUNE",
-       "A": "ENGINE", "A#": "UNDO", "B": "LOOP ▶■", "F#": "", "G#": ""}
+       "A": "ENGINE", "A#": "UNDO", "B": "LOOP ▶■", "F#": "VOICE", "G#": ""}
 HIGH = {"C": "FREEZE", "C#": "THROW", "D": "OCT −", "D#": "OCT +", "E": "WET", "F": "TAP", "F#": "ARP",
         "G": "PERM", "G#": "", "A": "", "A#": "", "B": ""}
 
@@ -211,7 +211,7 @@ the high octave holds performance effects.</p>
 <tr><td>D♯</td><td><b>Panic</b>: silence everything</td><td>Octave up on/off</td></tr>
 <tr><td>E</td><td>FX page</td><td><b>Wet only</b> (dry signal off) on/off</td></tr>
 <tr><td>F</td><td>SETUP page</td><td><b>Tap tempo</b> — two taps less than 2 s apart</td></tr>
-<tr><td>F♯</td><td>—</td><td><b>Arpeggiator</b> on/off</td></tr>
+<tr><td>F♯</td><td>VOICE page</td><td><b>Arpeggiator</b> on/off</td></tr>
 <tr><td>G</td><td>TUNE page</td><td>Arp <b>permutations</b> on/off</td></tr>
 <tr><td>G♯</td><td>—</td><td>Screen <b>view</b>: pages › scope › audio loop waveform</td></tr>
 <tr><td>A</td><td>ENGINE page</td><td><b>Audio loop</b>: record › play › overdub (hold 1 s: clear)</td></tr>
@@ -236,7 +236,7 @@ Rows whose value is a word (scale, key, engine, MIDI mode) show plain text. Line
 shows messages when you press a key or turn a combo. The top strip is always visible:</p>
 {strip_svg()}
 <div class="grid">
-{shot("page_play", "PLAY page with the Velvet engine. Strip: page 1 of 7, breath meter on the right.")}
+{shot("page_play", "PLAY page with the Velvet engine. Strip: page 1 of 8, breath meter on the right.")}
 {shot("loop_reverse", "Loop playing in reverse at 1.8× (&lt;1.8). The loop bar shows the position.")}
 {shot("loop_dub", "Overdubbing: tick marks on the loop bar.")}
 {shot("arp_on", "Arpeggiator on: dot next to the breath meter.")}
@@ -271,6 +271,12 @@ on a C harp the draw chord G-B-D-F becomes the pure 4:5:6:7 chord).</p>
              ("2", "MIDI", "MPE (each channel is its own note) or Standard (all channels merged into one)."),
              ("3", "Level", "Output level."),
              ("4", "MIDI out", "Off · Echo · Echo+Clock. Line 4 shows the MIDI arriving from the DM48X.")])}
+<h3>VOICE — legato and glide</h3>
+{page_table([("1", "Mode", "<b>Poly</b> (a voice per note) or <b>Mono legato</b>: one voice; a new note while one is held moves the voice there without a new attack, and releasing it goes back to the note still held."),
+             ("2", "Glide", "Portamento time, 0 (off) – 2 s. Bends during a glide don't cut it short."),
+             ("3", "When", "<b>Glide always</b>, or <b>Glide legato</b>: only from notes you are still holding (overlap the notes to slide)."),
+             ("4", "From", "<b>From nearest</b>: polyphonic portamento — each new note slides from the nearest note of the chord before (recent chords first), so a chord slides into the next chord. <b>From last</b>: every new note slides from the last note played.")])}
+<p>Glide works with every engine: the engine receives the start pitch, then a ramp to the new pitch. In Mono legato the engine gets no new note at all, only the ramp, so strings keep ringing and envelopes don't restart.</p>
 <div class="grid">{shot("page_fx", "FX")}{shot("tune_family", "TUNE: family, scale, key")}{shot("engine_monitor", "ENGINE: line 4 shows incoming MIDI")}{shot("page_library", "LIBRARY")}</div>
 
 <h2 class="pb">6. Engines</h2>
@@ -285,7 +291,7 @@ Turning the engine knob quickly through several engines switches once, to where 
 <tr><td><b>Halo</b></td><td>ethereal, resonant</td><td>Shimmer · Resonance · Air · Bloom</td><td>Upper partials bloom in (Bloom sets how fast), breath noise rings two tuned resonators, which brighten.</td></tr>
 <tr><td><b>Under</b></td><td>bass, subharmonic</td><td>Subs · Drive · Tone · Octave</td><td>Deeper subharmonics (f/3, f/4) fade in, more saturation, the filter opens. Octave knob: 0, −1, −2.</td></tr>
 <tr><td><b>Velvet</b></td><td>lush analog pad</td><td>Cutoff · Spread · Swell · Warmth</td><td>The filter opens, the three saws spread wider, warmth and a slow pitch drift deepen. Swell softens the attack.</td></tr>
-<tr><td><b>Steel</b></td><td>pedal steel string</td><td>Tone · Sustain · Steel · Bow</td><td>A plucked waveguide string. Each note plucks; breath is the volume pedal, brightens the string, adds a little drive and (with Bow) keeps the string ringing. Steel adds the stiff, metallic stretch of the partials.</td></tr>
+<tr><td><b>Steel</b></td><td>pedal steel string</td><td>Tone · Sustain · Steel · Attack</td><td>A waveguide string bowed by breath (no pluck): breath is the volume pedal and the bow, brightens the string and adds a little drive. Attack sets how fast the sound swells in when you blow, from 5 ms (instant) to 2 s (a slow volume-pedal swell). Steel adds the stiff, metallic stretch of the partials.</td></tr>
 <tr><td><b>Lyra</b></td><td>LIRA-8 style drone</td><td>Mod · Sharp · Detune · Drive</td><td>Two triangle oscillators modulate each other. Breath deepens the cross-modulation, sharpens the waves toward squares, widens the beating and pushes the drive. Pitch stays steady.</td></tr></table>
 <p>Steel is based on <b>Steelie</b> by gur_shulman (WTFPL). Lyra is based on <b>LIRA-8</b> by Miguel Moreno (BSD licence; after the Soma Laboratory Lyra-8).</p>
 <p>CC 74 (MPE timbre, if your controller sends it) also brightens each engine per note.</p>
