@@ -177,6 +177,11 @@ from t_apitch import apitch_test
 sh_ = apitch_test(P)
 check("audio loop pitch is continuous (+3.5 st)", sh_ is not None and abs(sh_ - 3.5) < 0.15, f"{sh_:+.2f} st" if sh_ else "")
 
+from t_apitch import aspeed_test
+got_, want_ = aspeed_test(P)
+check("audio loop speed is continuous (1.82x, tape pitch)", got_ is not None and abs(got_ - want_) < 0.15,
+      f"{got_:+.2f} st, expected {want_:+.2f}" if got_ else "")
+
 # 11. glide and legato (VOICE page)
 from t_glide import glide_tests
 g = glide_tests(P)

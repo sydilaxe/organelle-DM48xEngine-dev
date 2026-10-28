@@ -226,7 +226,7 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
 <tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
-<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>layer fade</b></td></tr>
+<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style, continuous) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>layer fade</b></td></tr>
 <tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
 

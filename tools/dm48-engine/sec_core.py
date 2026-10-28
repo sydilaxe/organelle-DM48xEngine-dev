@@ -203,6 +203,7 @@ def combos():
     # B: speed
     sp = to(cb, vals[0], "expr if(abs($f1 - 0.5) < 0.06, 1, if($f1 > 0.5, pow(2, ($f1 - 0.56) / 0.44 * 2), "
                          "-pow(2, (0.44 - $f1) / 0.44 * 2)))", 20, 225)
+    # MIDI loop speed stays in 0.1 steps (it drives the MIDI clock); the audio loop's speed is continuous
     spc = chain(cb, sp, ["expr int($f1 * 10 + if($f1 > 0, 0.5, -0.5)) / 10", "change", "t f f"], 20, 250)
     to(cb, spc, "s eng-loop-speed", 100, 350, outlet=1)
     to(cb, msg_to(cb, spc, "list Loop speed $1 x", 20, 325), "s $0-toast", 20, 350)
@@ -243,10 +244,10 @@ def combos():
     cb.c(lk, 0, lkp, 0)
     lkr = to(cb, lkp, "route 1 2 3 4", 20, 600)
     asp = chain(cb, lkr, ["expr if(abs($f1 - 0.5) < 0.06, 1, if($f1 > 0.5, pow(2, ($f1 - 0.56) / 0.44 * 2), "
-                          "-pow(2, (0.44 - $f1) / 0.44 * 2)))", "expr int($f1 * 10 + if($f1 > 0, 0.5, -0.5)) / 10",
-                          "change", "t f f"], 20, 625)
+                          "-pow(2, (0.44 - $f1) / 0.44 * 2)))", "change", "t f f"], 20, 625)    # continuous
     to(cb, asp, "s eng-aloop-speed", 120, 725, outlet=1)
-    to(cb, msg_to(cb, asp, "list Audio speed $1 x", 20, 725), "s $0-toast", 20, 750)
+    to(cb, msg_to(cb, to(cb, asp, "expr int($f1 * 100 + if($f1 > 0, 0.5, -0.5)) / 100", 20, 700),
+                  "list Audio speed $1 x", 20, 725), "s $0-toast", 20, 750)
     # pitch: continuous -12 .. +12 semitones (no steps); a small dead zone at the centre gives exactly 0
     apc = chain(cb, lkr, ["expr if(abs($f1 - 0.5) < 0.02, 0, ($f1 - 0.5 - if($f1 > 0.5, 0.02, -0.02)) * 24 / 0.96)",
                           "change", "t f f"], 250, 625, outlet=1)
