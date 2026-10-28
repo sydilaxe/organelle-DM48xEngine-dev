@@ -427,7 +427,7 @@ def bsaw(path):
 def feral(path):
     """Feral - built from scratch (no parts shared with the other engines): a capacitor-charge oscillator,
     a hard-synced slave, a vactrol low-pass gate, a breath-puff detector and an asymmetric diode clipper.
-    Mostly native signal objects (expr~ is slow on the Organelle): 4 expr~ per voice."""
+    Native signal objects only (expr~ is slow on the Organelle)."""
     e = Canvas(w=1400, h=1100)
     e.comment("Feral - raw, unstable, made to be played with breath. A capacitor-charge oscillator and a hard-synced "
               "slave whose ratio breath sweeps, through a vactrol low-pass gate (opens fast, closes slow). "
@@ -467,9 +467,25 @@ def feral(path):
     # with poly-BLEP at the reset
     cq = chain(e, ph, ["*~ 0.25", "-~ 0.25", "cos~"], 220, 350)
     cm = chain(e, mul(e, br, br, 330, 350), ["clip~ 0 1"], 330, 375)
-    capo = ex(e, "2 * ($v1 + ($v2 - $v1) * $v3) - 1 - if($v1 < $v4, 2 * $v1 / $v4 - ($v1 / $v4) * ($v1 / $v4) - 1, "
-                 "if($v1 > 1 - $v4, (($v1 - 1) / $v4) * (($v1 - 1) / $v4) + 2 * ($v1 - 1) / $v4 + 1, 0))",
-              [ph, cq, cm, dt], 20, 400)
+    nd = e.obj("-~", 220, 400)                            # ramp -> curve by cm
+    e.c(cq, 0, nd, 0)
+    e.c(ph, 0, nd, 1)
+    naive = chain(e, add(e, ph, mul(e, nd, cm, 220, 425), 20, 450), ["*~ 2", "-~ 1"], 20, 475)
+    # poly-BLEP at the reset, from two clamped ramps: (1 - (1 - t)/dt)^2 - (1 - t/dt)^2
+    q1 = e.obj("/~", 120, 400)
+    e.c(ph, 0, q1, 0)
+    e.c(dt, 0, q1, 1)
+    ra = chain(e, q1, ["*~ -1", "+~ 1", "clip~ 0 1"], 120, 425)
+    q2 = e.obj("/~", 170, 400)
+    e.c(chain(e, ph, ["*~ -1", "+~ 1"], 170, 375), 0, q2, 0)
+    e.c(dt, 0, q2, 1)
+    rb = chain(e, q2, ["*~ -1", "+~ 1", "clip~ 0 1"], 170, 425)
+    blep = e.obj("-~", 120, 500)
+    e.c(mul(e, rb, rb, 170, 475), 0, blep, 0)
+    e.c(mul(e, ra, ra, 120, 475), 0, blep, 1)
+    capo = e.obj("-~", 20, 525)
+    e.c(naive, 0, capo, 0)
+    e.c(blep, 0, capo, 1)
     # B: hard-synced slave: wrap(phase * ratio), ratio swept by breath and puffs, capped below 7 kHz
     r1 = add(e, chain(e, k1, ["*~ 3", "+~ 1"], 450, 300), mul(e, mul(e, br, k1, 550, 300), e.obj("sig~ 5", 650, 275), 550, 325), 450, 350)
     rr = add(e, r1, chain(e, puff, ["*~ 2"], 650, 350), 450, 375)
@@ -482,15 +498,23 @@ def feral(path):
     syn = chain(e, mul(e, ph, rat, 450, 450), ["wrap~", "*~ 2", "-~ 1"], 450, 475)
     # half-rate square sub, slightly rounded
     sq = chain(e, chain(e, hz, ["*~ 0.5", "phasor~"], 650, 450), ["-~ 0.5", "*~ -1e+06", "clip~ -1 1", "*~ 0.15", "rpole~ 0.85"], 650, 500)
-    mix = ex(e, "$v1 * (1 - $v3 * 0.8) + $v2 * $v3 * 0.9 + $v4 * (0.25 + $v5 * 0.8)",
-             [capo, syn, k1, sq, e.obj("r~ eng-body~", 760, 600)], 20, 650)
-    # crackle: sparse clicks while puffing, a little breath hiss
-    crk = ex(e, "($v1 > 0.985 - $v2 * 0.06) * $v2 * 1.2 + $v1 * $v3 * 0.08", [e.obj("noise~", 900, 600), puff, lv], 900, 650)
-    pre = add(e, mix, crk, 20, 680)
-    # asymmetric diode clipper (even harmonics), drive from Snarl, breath and puffs
-    drv = add(e, add(e, chain(e, mul(e, k2, k2, 220, 680), ["*~ 7", "+~ 1"], 220, 705), chain(e, br, ["*~ 2"], 320, 705), 220, 755),
-              chain(e, puff, ["*~ 5"], 420, 705), 220, 780)
-    dio = ex(e, "if($v1 * $v2 > 0, $v1 * $v2 / (1 + $v1 * $v2), $v1 * $v2 / (1 - 1.8 * $v1 * $v2))", [pre, drv], 20, 810)
+    # mix: capo * (1 - 0.8 Sync) + sync * 0.9 Sync + sub * (0.25 + 0.8 Body)
+    mix = add(e, add(e, mul(e, capo, chain(e, k1, ["*~ -0.8", "+~ 1"], 120, 625), 20, 650),
+                     mul(e, syn, chain(e, k1, ["*~ 0.9"], 450, 625), 450, 650), 20, 675),
+              mul(e, sq, chain(e, e.obj("r~ eng-body~", 760, 600), ["*~ 0.8", "+~ 0.25"], 760, 625), 650, 650), 20, 700)
+    # crackle: sparse clicks while puffing (noise above a threshold that drops with the puff), a little breath hiss
+    nz = e.obj("noise~", 900, 600)
+    hit = chain(e, add(e, nz, chain(e, puff, ["*~ 0.06", "-~ 0.985"], 1000, 625), 900, 650), ["*~ 1e+06", "clip~ 0 1"], 900, 675)
+    crk = add(e, mul(e, hit, chain(e, puff, ["*~ 1.2"], 1000, 700), 900, 725), mul(e, mul(e, nz, lv, 1100, 650), e.obj("sig~ 0.08", 1150, 675), 1100, 700), 900, 750)
+    pre = add(e, mix, crk, 20, 780)
+    # asymmetric diode clipper (even harmonics): y / (1 + 1.4|y| - 0.4y)  =  y/(1+y) above 0, y/(1+1.8|y|) below
+    drv = add(e, add(e, chain(e, mul(e, k2, k2, 220, 780), ["*~ 7", "+~ 1"], 220, 805), chain(e, br, ["*~ 2"], 320, 805), 220, 855),
+              chain(e, puff, ["*~ 5"], 420, 805), 220, 880)
+    y = mul(e, pre, drv, 20, 905)
+    den = add(e, chain(e, y, ["abs~", "*~ 1.4", "+~ 1"], 120, 930), chain(e, y, ["*~ -0.4"], 220, 930), 120, 980)
+    dio = e.obj("/~", 20, 1005)
+    e.c(y, 0, dio, 0)
+    e.c(den, 0, dio, 1)
     # vactrol: opens with breath at once, closes with a slow tail
     tl = e.obj("*~ 0", 450, 810)
     e.c(lv, 0, tl, 0)

@@ -226,7 +226,7 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
 <tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
-<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style) / <b>pitch</b> −12…+12 / <b>level</b> / <b>layer fade</b></td></tr>
+<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>layer fade</b></td></tr>
 <tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
 
@@ -407,7 +407,7 @@ so that single core is the budget. The patch is built for it:</p>
 <ul><li>Each voice switches its DSP off when silent, so only sounding voices cost anything. The audio looper's DSP is off until you first record; its 6 × 45 s of stereo buffers take about 95 MB of the M's 1 GB, reserved when the patch loads.</li>
 <li>Saws are band-limited without oversampling; filters are cheap 2-pole designs (Velvet cascades two for 4-pole warmth).</li>
 <li>All control logic is message-based; the arpeggiator, looper and screen run at control rate.</li></ul>
-<p>Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo and Feral are the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).
+<p>The effects, the looper and Feral use only Pd's fast built-in signal objects (no <code>expr~</code>), which cut the worst case — eight Feral voices while overdubbing — by about 40 %. Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo and Feral are the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).
 A Cortex-A53 core is very roughly 8–10× slower for this kind of work, so expect around 25–50 % of the Pd core on the Organelle M with eight
 voices held — less in normal playing. If you hear clicks, play fewer notes at once with Halo or Feral, or lower Reverb.</p>
 

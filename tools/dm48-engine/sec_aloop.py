@@ -83,12 +83,11 @@ def dsp():
         dry = chain(a, a.obj("sig~ 1", 150, 30), ["rpole~ 1"], 150, 30)
     pL, pR = a.obj("r~ eng-tap-postL", 270, 30), a.obj("r~ eng-tap-postR", 400, 30)
     ins = []
-    for p, x in ((pL, 150), (pR, 330)):
-        o = a.obj("expr~ $v1 * (1 - $v3) + $v2 * $v3", x, 110)
-        a.c(dry, 0, o, 0)
-        a.c(p, 0, o, 1)
-        a.c(post, 0, o, 2)
-        ins.append(o)
+    for p, x in ((pL, 150), (pR, 330)):                 # dry + (post - dry) * post   (native objects: cheap)
+        d = a.obj("-~", x, 85)
+        a.c(p, 0, d, 0)
+        a.c(dry, 0, d, 1)
+        ins.append(add2(a, dry, mul2(a, d, post, x, 110), x, 135))
     inL, inR = ins
     # playhead
     ph = a.obj("phasor~", 600, 110)
@@ -130,35 +129,46 @@ def dsp():
             acc = m if acc is None else add2(a, acc, m, x, 295)
         sums.append(acc)
     sumL, sumR = sums
-    # pitch shifter: two crossfaded delay taps per side; bypassed at 0 semitones
-    rate = chain(a, a.obj("r $0-apsrate", 1300, 330), ["sig~"], 1300, 355)
-    win = chain(a, a.obj("r $0-apswin", 1450, 330), ["sig~"], 1450, 355)
-    pph = to(a, rate, "phasor~", 1300, 380)
+    # pitch shifter: two crossfaded delay taps per side, in its own subpatch that only runs while the pitch is
+    # not 0 (switched off 100 ms after the bypass fade). Speed and window glide, so turning the knob is smooth.
+    ps = Canvas("pitch-shift", w=1200, h=700)
+    ps.comment("Runs only while the loop pitch is not 0. Out via throw~ (silent when switched off).", 20, 5)
+    sw = ps.obj("switch~", 900, 180)
+    sl = chain(ps, ps.obj("r $0-apson", 900, 30), ["sel 0"], 900, 55)
+    psd = to(ps, sl, "delay 100", 900, 80)
+    ps.c(msg_to(ps, psd, "0", 900, 105), 0, sw, 0)
+    on = to(ps, sl, "t b b", 1000, 80, outlet=1)
+    ps.c(msg_to(ps, on, "stop", 1060, 105, outlet=1), 0, psd, 0)
+    ps.c(msg_to(ps, on, "1", 1000, 105), 0, sw, 0)
+    rate = chain(ps, msg_to(ps, ps.obj("r $0-apsrate", 20, 30), "$1 30", 20, 55), ["line~"], 20, 80)
+    win = chain(ps, msg_to(ps, ps.obj("r $0-apswin", 200, 30), "$1 60", 200, 55), ["line~"], 200, 80)
+    pph = to(ps, rate, "phasor~", 20, 105)
+    for side, x in (("L", 20), ("R", 600)):
+        src = ps.obj(f"r~ $0-apin{side}", x, 140)
+        to(ps, src, f"delwrite~ $0-aps{side} 400", x, 165)
+        taps = []
+        for k, dx in ((0, 0), (0.5, 250)):
+            p = to(ps, pph, f"+~ {k}", x + dx, 200)
+            w = to(ps, p, "wrap~", x + dx, 225)
+            d = mul2(ps, w, win, x + dx, 250)
+            rd = to(ps, d, f"vd~ $0-aps{side}", x + dx, 275)
+            wnd = chain(ps, w, ["-~ 0.5", "*~ 0.5", "cos~"], x + dx + 120, 275)
+            taps.append(mul2(ps, rd, wnd, x + dx, 350))
+        to(ps, add2(ps, taps[0], taps[1], x, 380), f"throw~ $0-apout{side}", x, 405)
+    a.sub(ps, 1300, 300)
     byp = smooth_msg(a, "$0-apson", 40, 1600, 330)
     shifted = []
     for side, src, x in (("L", sumL, 20), ("R", sumR, 650)):
-        to(a, src, f"delwrite~ $0-aps{side} 400", x, 360)
-        taps = []
-        for k, dx in ((0, 0), (0.5, 300)):
-            p = to(a, pph, f"+~ {k}", x + dx, 410)
-            w = to(a, p, "wrap~", x + dx, 435)
-            d = mul2(a, w, win, x + dx, 460)
-            rd = to(a, d, f"vd~ $0-aps{side}", x + dx, 485)
-            wnd = chain(a, w, ["-~ 0.5", "*~ 0.5", "cos~"], x + dx + 120, 485)
-            taps.append(mul2(a, rd, wnd, x + dx, 560))
-        sh = add2(a, taps[0], taps[1], x, 590)
-        mx = a.obj("expr~ $v1 + ($v2 - $v1) * $v3", x, 620)
-        a.c(src, 0, mx, 0)
-        a.c(sh, 0, mx, 1)
-        a.c(byp, 0, mx, 2)
-        shifted.append(mx)
+        to(a, src, f"s~ $0-apin{side}", x, 360)
+        sh = a.obj(f"catch~ $0-apout{side}", x + 150, 590)
+        d = a.obj("-~", x + 150, 615)                   # src + (shifted - src) * bypass
+        a.c(sh, 0, d, 0)
+        a.c(src, 0, d, 1)
+        shifted.append(add2(a, src, mul2(a, d, byp, x + 150, 640), x, 665))
     lvl = smooth_msg(a, "$0-alvlsig", 50, 1300, 620)
     oL, oR = mul2(a, shifted[0], lvl, 20, 680), mul2(a, shifted[1], lvl, 650, 680)
     # routing: Pre -> mono into the effects input; Post -> stereo after the effects
-    pre = a.obj("expr~ ($v1 + $v2) * 0.5 * (1 - $v3)", 20, 720)
-    a.c(oL, 0, pre, 0)
-    a.c(oR, 0, pre, 1)
-    a.c(post, 0, pre, 2)
+    pre = mul2(a, to(a, add2(a, oL, oR, 20, 695), "*~ 0.5", 20, 710), chain(a, post, ["*~ -1", "+~ 1"], 120, 695), 20, 730)
     # throw~ (not s~): when the looper's DSP is switched off a throw~ adds nothing, an s~ would repeat its last block
     to(a, pre, "throw~ eng-aret-pre", 20, 745)
     for o, side, x in ((oL, "L", 300), (oR, "R", 450)):
@@ -171,11 +181,7 @@ def dsp():
         # would blend in the neighbour the writer has just overwritten)
         rd = to(a, to(a, widx2, "+~ 0.5", x + 200, 860), f"tabread~ enga{side}0", x + 200, 880)
         a.c(a.obj(f"r $0-awset{side}", x + 200, 855), 0, rd, 0)
-        wr = a.obj("expr~ $v1 * $v2 + $v3 * $v4", x, 920)
-        a.c(src, 0, wr, 0)
-        a.c(gate, 0, wr, 1)
-        a.c(rd, 0, wr, 2)
-        a.c(ksig, 0, wr, 3)
+        wr = add2(a, mul2(a, src, gate, x, 900), mul2(a, rd, ksig, x + 100, 900), x, 920)   # in * gate + old * k
         tw = a.obj(f"tabwrite~ enga{side}0", x, 950)
         a.c(wr, 0, tw, 0)
         a.c(a.obj(f"r $0-awset{side}", x + 120, 925), 0, tw, 0)

@@ -22,7 +22,7 @@ KEYS  (the Organelle keyboard is a control surface; play the DM48X)
               right = forward (faster further right). MIDI clock follows.
    C + knob   reverb size      C# + knob  throw feedback     E + knob  reverb amount
    F + knob   tempo 40-200     F# + knob 1 arp rate, knob 2 pattern, knob 3 octaves
-   high A + knob 1 audio loop speed/reverse, 2 pitch, 3 level, 4 layer fade
+   high A + knob 1 audio loop speed/reverse, 2 pitch (continuous, -12..+12), 3 level, 4 layer fade
    high B + knob  audio loop records Pre / Post effects
    Audio overdubs keep the speed they were recorded at (tape style): dub at 2x, play at 1x = an octave down.
 

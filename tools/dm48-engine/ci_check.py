@@ -172,7 +172,12 @@ for post in (False, True):
     check(f"audio loop clear is silent ({'Post' if post else 'Pre'})", play > 0.02 and after < 0.001,
           f"playing {play:.3f} after clear {after:.4f}")
 
-# 10. glide and legato (VOICE page)
+# 10. audio loop pitch is continuous (+3.5 semitones)
+from t_apitch import apitch_test
+sh_ = apitch_test(P)
+check("audio loop pitch is continuous (+3.5 st)", sh_ is not None and abs(sh_ - 3.5) < 0.15, f"{sh_:+.2f} st" if sh_ else "")
+
+# 11. glide and legato (VOICE page)
 from t_glide import glide_tests
 g = glide_tests(P)
 mid = lambda tr, i: tr[i] if tr[i] is not None else 0

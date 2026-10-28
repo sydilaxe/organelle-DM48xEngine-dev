@@ -401,14 +401,15 @@ def audio():
     thr = smooth(a, "eng-throw", 30, 550, 200)
     fb = smooth(a, "eng-dfb", 50, 700, 200)
     tfb = smooth(a, "eng-throwfb", 50, 620, 300)
-    fbe = a.obj("expr~ min(1.05, max($v1, $v2 * $v3))", 700, 300)
-    a.c(fb, 0, fbe, 0)
-    a.c(thr, 0, fbe, 1)
-    a.c(tfb, 0, fbe, 2)
+    # (native signal objects throughout: expr~ is much slower on the Organelle)
+    fmx = a.obj("max~", 700, 300)                                     # min(1.05, max(fb, throw * throwfb))
+    a.c(fb, 0, fmx, 0)
+    a.c(mul(a, thr, tfb, 760, 275), 0, fmx, 1)
+    fbe = to(a, fmx, "min~ 1.05", 700, 325)
     dmix = smooth(a, "eng-dmix", 50, 850, 200)
-    dmx = a.obj("expr~ max($v1, $v2 * 0.6)", 850, 300)
+    dmx = a.obj("max~", 850, 300)                                     # max(dmix, throw * 0.6)
     a.c(dmix, 0, dmx, 0)
-    a.c(thr, 0, dmx, 1)
+    a.c(to(a, thr, "*~ 0.6", 900, 275), 0, dmx, 1)
     dL = a.obj("delread4~ $0-dl", 300, 400)
     dR = a.obj("delread4~ $0-dr", 500, 400)
     a.c(dtm, 0, dL, 0)
@@ -461,11 +462,11 @@ def audio():
         a.c(tm, 0, rd, 0)
         hi = to(a, rd, "lop~ 5500", x, 1185)
         lo = to(a, rd, "lop~ 250", x + 70, 1185)
-        dmp = a.obj("expr~ $v1 * $v3 + $v2 * ($v4 - $v3)", x, 1210)
-        a.c(hi, 0, dmp, 0)
-        a.c(lo, 0, dmp, 1)
-        a.c(gl[2 * i], 0, dmp, 2)
-        a.c(gl[2 * i + 1], 0, dmp, 3)
+        # hi * g_hi + lo * (g_lo - g_hi)
+        gd = a.obj("-~", x + 140, 1210)
+        a.c(gl[2 * i + 1], 0, gd, 0)
+        a.c(gl[2 * i], 0, gd, 1)
+        dmp = add(a, mul(a, hi, gl[2 * i], x, 1210), mul(a, lo, gd, x + 70, 1235), x, 1260)
         ins.append(dmp)
     # Hadamard 8x8 in three butterfly stages
     v = [(n, 0) for n in ins]
@@ -474,24 +475,33 @@ def audio():
         for i in range(8):
             if i & step:
                 continue
-            bf = a.obj("expr~ ($v1 + $v2)" + ("*0.35355" if step == 4 else "") + "; ($v1 - $v2)" +
-                       ("*0.35355" if step == 4 else ""), 20 + i * 210, 1250 + stage * 30)
-            a.c(v[i][0], v[i][1], bf, 0)
-            a.c(v[i + step][0], v[i + step][1], bf, 1)
-            nv[i], nv[i + step] = (bf, 0), (bf, 1)
+            xx, yy = 20 + i * 210, 1290 + stage * 60
+            sm_, df_ = a.obj("+~", xx, yy), a.obj("-~", xx + 60, yy)
+            for o in (sm_, df_):
+                a.c(v[i][0], v[i][1], o, 0)
+                a.c(v[i + step][0], v[i + step][1], o, 1)
+            if step == 4:
+                sm_, df_ = to(a, sm_, "*~ 0.35355", xx, yy + 25), to(a, df_, "*~ 0.35355", xx + 60, yy + 25)
+            nv[i], nv[i + step] = (sm_, 0), (df_, 0)
         v = nv
     outsL, outsR = [], []
+    rp, rn = to(a, rin, "*~ 0.45", 1300, 1400), to(a, rin, "*~ -0.45", 1400, 1400)
     for i in range(8):
         x = 20 + i * 210
-        w = a.obj(f"expr~ $v1 + $v2 * {0.45 if i % 2 == 0 else -0.45}", x, 1350)
+        w = a.obj("+~", x, 1480)
         a.c(v[i][0], v[i][1], w, 0)
-        a.c(rin, 0, w, 1)
-        to(a, w, f"delwrite~ $0-fdn{i} 300", x, 1375)
-    lsum = a.obj("expr~ ($v1 - $v2 + $v3 - $v4) * 0.85", 20, 1420)
-    rsum = a.obj("expr~ ($v1 - $v2 + $v3 - $v4) * 0.85", 400, 1420)
-    for j in range(4):
-        a.c(ins[2 * j], 0, lsum, j)
-        a.c(ins[2 * j + 1], 0, rsum, j)
+        a.c(rp if i % 2 == 0 else rn, 0, w, 1)
+        to(a, w, f"delwrite~ $0-fdn{i} 300", x, 1505)
+    def sum4(q, x):                                   # (q0 - q1 + q2 - q3) * 0.85
+        d1 = a.obj("-~", x, 1540)
+        a.c(q[0], 0, d1, 0)
+        a.c(q[1], 0, d1, 1)
+        d2 = a.obj("-~", x + 60, 1540)
+        a.c(q[2], 0, d2, 0)
+        a.c(q[3], 0, d2, 1)
+        return to(a, add(a, d1, d2, x, 1565), "*~ 0.85", x, 1590)
+    lsum = sum4([ins[0], ins[2], ins[4], ins[6]], 20)
+    rsum = sum4([ins[1], ins[3], ins[5], ins[7]], 400)
     apL, apR = lsum, rsum
     rmix = smooth(a, "eng-rmix", 50, 1000, 700, scale="* 0.6")
     wet = smooth(a, "eng-wetonly", 100, 1150, 700)

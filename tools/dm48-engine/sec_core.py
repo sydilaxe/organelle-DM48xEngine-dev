@@ -247,9 +247,12 @@ def combos():
                           "change", "t f f"], 20, 625)
     to(cb, asp, "s eng-aloop-speed", 120, 725, outlet=1)
     to(cb, msg_to(cb, asp, "list Audio speed $1 x", 20, 725), "s $0-toast", 20, 750)
-    apc = chain(cb, lkr, ["expr int(($f1 - 0.5) * 24.99)", "change", "t f f"], 250, 625, outlet=1)
+    # pitch: continuous -12 .. +12 semitones (no steps); a small dead zone at the centre gives exactly 0
+    apc = chain(cb, lkr, ["expr if(abs($f1 - 0.5) < 0.02, 0, ($f1 - 0.5 - if($f1 > 0.5, 0.02, -0.02)) * 24 / 0.96)",
+                          "change", "t f f"], 250, 625, outlet=1)
     to(cb, apc, "s eng-aloop-pitch", 350, 700, outlet=1)
-    to(cb, msg_to(cb, apc, "list Audio pitch $1 st", 250, 700), "s $0-toast", 250, 725)
+    to(cb, msg_to(cb, to(cb, apc, "expr int($f1 * 100 + if($f1 > 0, 0.5, -0.5)) / 100", 250, 675),
+                  "list Audio pitch $1 st", 250, 700), "s $0-toast", 250, 725)
     alv = chain(cb, lkr, ["t f f"], 450, 625, outlet=2)
     to(cb, alv, "s eng-aloop-level", 550, 650, outlet=1)
     to(cb, msg_to(cb, to(cb, alv, "expr int($f1 * 100)", 450, 650), "list Audio level $1", 450, 675), "s $0-toast", 450, 700)
