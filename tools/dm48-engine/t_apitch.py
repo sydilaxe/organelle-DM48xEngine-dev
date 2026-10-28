@@ -25,7 +25,8 @@ if __name__ == "__main__":
 
 def aspeed_test(P, knob=0.75):
     """audio loop speed is continuous: knob -> speed s, the loop's pitch moves by 12*log2(s) (tape)"""
-    sp = 2 ** ((knob - 0.56) / 0.44 * 2)
+    u = (0.44 - knob) / 0.44
+    sp = 2 ** ((knob - 0.56) / 0.44 * 2) if knob > 0.5 else max(0.05, 1 - 3 * u)
     ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {1.5 / 7}"),
           (400, "notesRaw 60 100"), (450, "notesRaw 60 0"), (500, "notesRaw 64 100"), (510, "notesRaw 64 0"),
           (520, "knob3 0.5"), (530, "knob3 0"), (540, "knob4 0.5"), (550, "knob4 0")]

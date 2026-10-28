@@ -76,7 +76,7 @@ This is the working memory for this project: read it first in any new session.
     - The overdub re-reads the old sample with `tabread~` at the rounded index, because `tabread4~` would blend in the neighbour just overwritten.
     - The first take records 12 ms extra and crossfades it into its start, so the seam is click-free.
     - `t_clicks.py` measures clicks (bursts above 8 kHz); `DBG_ALOOP=1` records a sample counter for alignment checks.
-  - **Speed and pitch are continuous** (the MIDI loop speed stays in 0.1 steps: it drives the MIDI clock).
+  - **Speed and pitch are continuous** (the MIDI loop speed stays in 0.1 steps: it drives the MIDI clock). Speed knob = varispeed: centre 1x, right up to 4x, left slows to 0.05x at a third of the way, then reverse to -1x at full left (|speed| >= 0.05).
   - **Pitch shift:** continuous (not in semitone steps); two crossfaded `vd~` taps in a subpatch that is switched off at 0 semitones; speed and window glide (`line~`).
   - **Tap points:** Pre `eng-tap-pre` / `eng-aret-pre` (into the FX); Post `eng-tap-postL/R` / `eng-aret-L/R` (before the limiter).
   - **DSP:** switched off until the first recording (`$0-adsp`).

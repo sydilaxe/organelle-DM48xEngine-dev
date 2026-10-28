@@ -181,6 +181,9 @@ from t_apitch import aspeed_test
 got_, want_ = aspeed_test(P)
 check("audio loop speed is continuous (1.82x, tape pitch)", got_ is not None and abs(got_ - want_) < 0.15,
       f"{got_:+.2f} st, expected {want_:+.2f}" if got_ else "")
+got_, want_ = aspeed_test(P, knob=0.44 - 0.44 / 6)       # left of centre: slower (0.5x, an octave down)
+check("audio loop speed left of centre slows down (0.5x)", got_ is not None and abs(got_ - want_) < 0.15,
+      f"{got_:+.2f} st, expected {want_:+.2f}" if got_ else "")
 
 # 11. glide and legato (VOICE page)
 from t_glide import glide_tests

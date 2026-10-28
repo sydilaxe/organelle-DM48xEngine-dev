@@ -243,8 +243,12 @@ def combos():
     cb.c(lk, 1, lkp, 1)
     cb.c(lk, 0, lkp, 0)
     lkr = to(cb, lkp, "route 1 2 3 4", 20, 600)
+    # varispeed, continuous: centre 1x; right faster (to 4x); left slows down through a near-stop (0.05x, a third of
+    # the way) into reverse, -1x at full left
+    U = "(0.44 - $f1) / 0.44"
     asp = chain(cb, lkr, ["expr if(abs($f1 - 0.5) < 0.06, 1, if($f1 > 0.5, pow(2, ($f1 - 0.56) / 0.44 * 2), "
-                          "-pow(2, (0.44 - $f1) / 0.44 * 2)))", "change", "t f f"], 20, 625)    # continuous
+                          f"if({U} < 0.3333, max(0.05, 1 - 3 * {U}), min(-0.05, -({U} - 0.3333) * 1.5))))",
+                          "change", "t f f"], 20, 625)
     to(cb, asp, "s eng-aloop-speed", 120, 725, outlet=1)
     to(cb, msg_to(cb, to(cb, asp, "expr int($f1 * 100 + if($f1 > 0, 0.5, -0.5)) / 100", 20, 700),
                   "list Audio speed $1 x", 20, 725), "s $0-toast", 20, 750)

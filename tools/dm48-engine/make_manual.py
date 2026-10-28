@@ -320,7 +320,7 @@ layer different engines: record a pass with Halo, switch to Steel, overdub, and 
 <tr><td>Undo</td><td>High A♯ removes the newest layer (again for the one before).</td></tr>
 <tr><td>Stop / start</td><td>High B.</td></tr>
 <tr><td>Clear</td><td>Hold high A for 1 s.</td></tr>
-<tr><td>Speed &amp; direction</td><td>Hold high A + knob 1: like tape, pitch follows speed; left of centre plays backwards.</td></tr>
+<tr><td>Speed &amp; direction</td><td>Hold high A + knob 1: varispeed like tape, continuous, pitch follows speed. Centre = 1×; right speeds up to 4×; left slows down (0.5× is an octave down) to a near-stop about a third of the way, then plays backwards, up to −1× at full left.</td></tr>
 <tr><td>Pitch</td><td>Hold high A + knob 2: −12…+12 semitones, speed unchanged.</td></tr>
 <tr><td>Level / layer fade</td><td>Hold high A + knob 3 / knob 4. Layer fade makes older layers fade a little each pass (off at the right end).</td></tr>
 <tr><td>Pre / Post</td><td>Hold high B + a knob. <b>Pre</b> records the synth before the effects; the loop then goes through the delay and reverb you set now.
