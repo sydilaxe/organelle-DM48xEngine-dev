@@ -37,7 +37,7 @@ This is the working memory for this project: read it first in any new session.
   - `vcf~`: the lowpass goes silent when cf/q exceeds about sr/2π. Keep q and cf in range.
   - `bob~` at oversample 1 is unstable above about 8 kHz.
   - A `delwrite~`/`vd~` feedback loop can't be shorter than one block (64 samples); use `block~ 16` for short loops.
-- **CPU: avoid per-sample `expr~`** in anything that always runs. The FX, the audio looper and Feral use native objects only (`+~ -~ *~ /~ max~ min~ abs~ clip~ wrap~ mtof~`); that cut 8 Feral voices + overdub from 5.8 % to 3.6 % of an x86 core. Overdub "fuzz" on the Organelle was CPU overload (offline renders were clean). Halo/Steel/Lyra still use 7-10 expr~ each.
+- **CPU: avoid per-sample `expr~`** in anything that always runs. The FX, the audio looper and Feral use native objects only (`+~ -~ *~ /~ max~ min~ abs~ clip~ wrap~ mtof~`); that cut 8 Feral voices + overdub from 5.8 % to 3.6 % of an x86 core. Overdub "fuzz" on the Organelle was CPU overload (offline renders were clean). The engines' `ex()` formulas are compiled to native objects at build time by `tools/dm48-engine/sigexpr.py` (+ - * /, min, max, abs, fmod(x,1), pow, exp, sqrt, mtof; constants folded; falls back to expr~ otherwise; `NO_SIGEXPR=1` builds the old way). Renders match the expr~ build to 108-177 dB. Glitches when overdubbing with the loop pitched down were CPU (offline clean); the pitch shifter adds ~10 %.
 - **Measuring CPU offline:** child CPU time (`resource.getrusage`) of a 100 s run minus a 10 s run (cancels start-up and the 95 MB looper allocation); wall-clock timing is too noisy.
 - **`expr`:**
   - No `wrap()`; use `fmod(x + 4, 1)`.

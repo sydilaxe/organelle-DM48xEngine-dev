@@ -1,6 +1,7 @@
 """Bundled engines. Each engines/NAME.pd is ONE voice following the engine contract (see CONTRACT)."""
 import os
 from pdgen import Canvas
+from sigexpr import compile_expr
 
 CONTRACT = """MAKING AN ENGINE
 ================
@@ -34,7 +35,8 @@ engines/NAME.txt (optional):
 e.g.   Fold Grit Detune Tone;
        0.3 0.2 0.4 0.5;
 
-Tips: keep it light (8 copies run at once). Let breath (the level inlet) shape several
+Tips: keep it light (8 copies run at once). Prefer native signal objects (+~ *~ min~ mtof~ ...)
+over [expr~]: expr~ is several times slower on the Organelle's ARM CPU. Let breath (the level inlet) shape several
 things a little - brightness, harmonics, noise, detune - rather than one thing a lot.
 After adding a file, reload the patch; the new engine appears on the ENGINE page.
 """
@@ -77,7 +79,12 @@ def chain(e, src, texts, x, y, outlet=0):
 
 
 def ex(e, text, ins, x, y):
-    """[expr~ text] with signal inputs ins ($v1, $v2, ...)"""
+    """the formula as native signal objects (sigexpr: expr~ is slow on the Organelle); [expr~ text] if it can't be
+    converted. Signal inputs ins = $v1, $v2, ..."""
+    if not os.environ.get("NO_SIGEXPR"):
+        o = compile_expr(e, text, ins, x, y)
+        if o is not None:
+            return o
     o = e.obj(f"expr~ {text}", x, y)
     for i, s in enumerate(ins):
         e.c(s, 0, o, i)

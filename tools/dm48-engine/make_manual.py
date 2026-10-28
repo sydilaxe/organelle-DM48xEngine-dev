@@ -407,7 +407,7 @@ so that single core is the budget. The patch is built for it:</p>
 <ul><li>Each voice switches its DSP off when silent, so only sounding voices cost anything. The audio looper's DSP is off until you first record; its 6 × 45 s of stereo buffers take about 95 MB of the M's 1 GB, reserved when the patch loads.</li>
 <li>Saws are band-limited without oversampling; filters are cheap 2-pole designs (Velvet cascades two for 4-pole warmth).</li>
 <li>All control logic is message-based; the arpeggiator, looper and screen run at control rate.</li></ul>
-<p>The effects, the looper and Feral use only Pd's fast built-in signal objects (no <code>expr~</code>), which cut the worst case — eight Feral voices while overdubbing — by about 40 %. Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo and Feral are the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).
+<p>The effects, the looper and all seven engines use only Pd's fast built-in signal objects — no <code>expr~</code>, which is slow on the Organelle's ARM processor. The engines' formulas are converted automatically when the patch is built (the sound is identical); this cut eight voices overdubbing with the loop pitched down by 15–40 %. Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo and Feral are the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).
 A Cortex-A53 core is very roughly 8–10× slower for this kind of work, so expect around 25–50 % of the Pd core on the Organelle M with eight
 voices held — less in normal playing. If you hear clicks, play fewer notes at once with Halo or Feral, or lower Reverb.</p>
 

@@ -30,6 +30,7 @@ engines/NAME.txt (optional):
 e.g.   Fold Grit Detune Tone;
        0.3 0.2 0.4 0.5;
 
-Tips: keep it light (8 copies run at once). Let breath (the level inlet) shape several
+Tips: keep it light (8 copies run at once). Prefer native signal objects (+~ *~ min~ mtof~ ...)
+over [expr~]: expr~ is several times slower on the Organelle's ARM CPU. Let breath (the level inlet) shape several
 things a little - brightness, harmonics, noise, detune - rather than one thing a lot.
 After adding a file, reload the patch; the new engine appears on the ENGINE page.
