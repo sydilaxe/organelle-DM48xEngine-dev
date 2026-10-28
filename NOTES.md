@@ -37,6 +37,8 @@ This is the working memory for this project: read it first in any new session.
   - `vcf~`: the lowpass goes silent when cf/q exceeds about sr/2π. Keep q and cf in range.
   - `bob~` at oversample 1 is unstable above about 8 kHz.
   - A `delwrite~`/`vd~` feedback loop can't be shorter than one block (64 samples); use `block~ 16` for short loops.
+- **CPU: avoid per-sample `expr~`** in anything that always runs. The FX, the audio looper and Feral use native objects only (`+~ -~ *~ /~ max~ min~ abs~ clip~ wrap~ mtof~`); that cut 8 Feral voices + overdub from 5.8 % to 3.6 % of an x86 core. Overdub "fuzz" on the Organelle was CPU overload (offline renders were clean). Halo/Steel/Lyra still use 7-10 expr~ each.
+- **Measuring CPU offline:** child CPU time (`resource.getrusage`) of a 100 s run minus a 10 s run (cancels start-up and the 95 MB looper allocation); wall-clock timing is too noisy.
 - **`expr`:**
   - No `wrap()`; use `fmod(x + 4, 1)`.
   - Up to 16 outlets with `;` works. Inside a `.pd` file the `;` must be escaped as `\;`.
@@ -74,7 +76,7 @@ This is the working memory for this project: read it first in any new session.
     - The overdub re-reads the old sample with `tabread~` at the rounded index, because `tabread4~` would blend in the neighbour just overwritten.
     - The first take records 12 ms extra and crossfades it into its start, so the seam is click-free.
     - `t_clicks.py` measures clicks (bursts above 8 kHz); `DBG_ALOOP=1` records a sample counter for alignment checks.
-  - **Pitch shift:** two crossfaded `vd~` taps; bypassed at 0 semitones.
+  - **Pitch shift:** continuous (not in semitone steps); two crossfaded `vd~` taps in a subpatch that is switched off at 0 semitones; speed and window glide (`line~`).
   - **Tap points:** Pre `eng-tap-pre` / `eng-aret-pre` (into the FX); Post `eng-tap-postL/R` / `eng-aret-L/R` (before the limiter).
   - **DSP:** switched off until the first recording (`$0-adsp`).
 - **Screen views** (`scope()` in `sec_oled.py`):
@@ -93,7 +95,7 @@ This is the working memory for this project: read it first in any new session.
   - Glide: every note start goes into a 16-entry buffer (`engpbuf` pitch, `engpbuft` time, `engpbufh` held). A new note searches notes started > 30 ms ago and glides from the nearest one (+1 semitone per second of age, so the last chord wins) or the latest one (From last). Glide legato = only held notes. `[poly]` is round-robin, so a per-voice "last pitch" doesn't work for chord glides.
   - The engine gets "source 0" then "pitch ms". A bend during a glide uses the remaining glide time.
   - VOICE values are saved after the engine name in settings.txt (`SAVED_TAIL`), so older settings files still load.
-- **Feral** (built from scratch, no shared parts): capacitor-charge osc (ramp blended with a sin quarter by breath²) with poly-BLEP, hard-synced slave (wrap~(phase × ratio)), half-rate square sub, puff detector (rzero~ differentiator → rpole~ hold), vactrol LPG (max~ of breath and a slow rpole~ tail; one-poles with a = 1 − w), asymmetric diode clipper. Only 4 expr~ per voice: per-sample expr~ is slow, so the first version (25 expr~) cost 2.5× the other engines.
+- **Feral** (built from scratch, no shared parts): capacitor-charge osc (ramp blended with a sin quarter by breath²) with poly-BLEP, hard-synced slave (wrap~(phase × ratio)), half-rate square sub, puff detector (rzero~ differentiator → rpole~ hold), vactrol LPG (max~ of breath and a slow rpole~ tail; one-poles with a = 1 − w), asymmetric diode clipper. No expr~ at all: per-sample expr~ is slow, so the first version (25 expr~) cost 2.5× the other engines.
 - **Steel** has no pluck: breath is the bow. Knob 4 Attack = minimum rise time of the breath level (5 ms – 2 s).
 - **Voice allocation:** one voice per key. A repeated note-on first releases the key, and orphan note-offs are dropped (`engkeyon`). This fixed stuck notes after clearing the looper.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).
