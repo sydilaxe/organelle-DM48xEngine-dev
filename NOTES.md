@@ -93,6 +93,7 @@ This is the working memory for this project: read it first in any new session.
   - Glide: every note start goes into a 16-entry buffer (`engpbuf` pitch, `engpbuft` time, `engpbufh` held). A new note searches notes started > 30 ms ago and glides from the nearest one (+1 semitone per second of age, so the last chord wins) or the latest one (From last). Glide legato = only held notes. `[poly]` is round-robin, so a per-voice "last pitch" doesn't work for chord glides.
   - The engine gets "source 0" then "pitch ms". A bend during a glide uses the remaining glide time.
   - VOICE values are saved after the engine name in settings.txt (`SAVED_TAIL`), so older settings files still load.
+- **Feral** (built from scratch, no shared parts): capacitor-charge osc (ramp blended with a sin quarter by breath²) with poly-BLEP, hard-synced slave (wrap~(phase × ratio)), half-rate square sub, puff detector (rzero~ differentiator → rpole~ hold), vactrol LPG (max~ of breath and a slow rpole~ tail; one-poles with a = 1 − w), asymmetric diode clipper. Only 4 expr~ per voice: per-sample expr~ is slow, so the first version (25 expr~) cost 2.5× the other engines.
 - **Steel** has no pluck: breath is the bow. Knob 4 Attack = minimum rise time of the breath level (5 ms – 2 s).
 - **Voice allocation:** one voice per key. A repeated note-on first releases the key, and orphan note-offs are dropped (`engkeyon`). This fixed stuck notes after clearing the looper.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).

@@ -424,6 +424,102 @@ def bsaw(path):
     bs.save(path)
 
 
+def feral(path):
+    """Feral - built from scratch (no parts shared with the other engines): a capacitor-charge oscillator,
+    a hard-synced slave, a vactrol low-pass gate, a breath-puff detector and an asymmetric diode clipper.
+    Mostly native signal objects (expr~ is slow on the Organelle): 4 expr~ per voice."""
+    e = Canvas(w=1400, h=1100)
+    e.comment("Feral - raw, unstable, made to be played with breath. A capacitor-charge oscillator and a hard-synced "
+              "slave whose ratio breath sweeps, through a vactrol low-pass gate (opens fast, closes slow). "
+              "Fast breath changes (puffs) kick the sync, crackle and snarl. Knobs: Sync, Snarl, Tone, Tail", 20, 5)
+    ip, il, it = e.obj("inlet", 20, 40), e.obj("inlet", 300, 40), e.obj("inlet", 500, 40)
+    pl = e.obj("line~", 20, 65)
+    e.c(ip, 0, pl, 0)
+    lv = e.obj("line~", 300, 65)
+    e.c(il, 0, lv, 0)
+    tb = e.obj("line~", 500, 65)
+    e.c(it, 0, tb, 0)
+    k1, k2, k3, bamt = (e.obj(f"r~ {n}", 700 + i * 90, 40) for i, n in
+                        enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "eng-bamt~")))
+    SR = 44100
+    # Tail knob (control rate): vactrol release coefficient, and puff sensitivity
+    k4 = e.obj("r $1-p4", 1100, 40)
+    tc = chain(e, k4, [f"expr exp(-1 / ((0.03 + $f1 * $f1 * 0.6) * {SR}))", "t f f"], 1100, 65)
+    tg = chain(e, tc, ["expr 1 - $f1"], 1200, 115, outlet=0)
+    # puff: how fast breath is rising (differentiator, rectified, held ~30 ms)
+    dv = chain(e, lv, ["rzero~ 1", "clip~ 0 1", "*~ 500"], 300, 95)
+    pf = chain(e, dv, ["rpole~ 0.9993", "*~ 0.0007", "clip~ 0 1"], 300, 170)
+    puff = pf
+    # breath, scaled by Breath>Tone
+    br = mul(e, lv, chain(e, bamt, ["*~ 0.65", "+~ 0.35"], 420, 95), 300, 245)
+    # wander: sample-and-hold random steps, smoothed
+    sh = e.obj("samphold~", 900, 120)
+    e.c(e.obj("noise~", 900, 95), 0, sh, 0)
+    e.c(e.obj("phasor~ 2.3", 980, 95), 0, sh, 1)
+    wd = chain(e, sh, ["*~ 0.0003", "rpole~ 0.9997", "*~ 0.12"], 900, 145)
+    # pitch (MIDI) -> Hz: wander, puffs push sharp, host vibrato
+    m = add(e, add(e, pl, e.obj("r~ eng-vib", 120, 95), 20, 120), add(e, wd, chain(e, puff, ["*~ 0.35"], 200, 200), 200, 225), 20, 250)
+    hz = chain(e, m, ["mtof~", "clip~ 1 6000"], 20, 275)
+    ph = e.obj("phasor~", 20, 325)
+    e.c(hz, 0, ph, 0)
+    dt = chain(e, hz, [f"*~ {1 / SR:.9f}"], 120, 325)
+    # A: capacitor-charge curve: a straight ramp bending into a charging curve (sin quarter) as breath rises,
+    # with poly-BLEP at the reset
+    cq = chain(e, ph, ["*~ 0.25", "-~ 0.25", "cos~"], 220, 350)
+    cm = chain(e, mul(e, br, br, 330, 350), ["clip~ 0 1"], 330, 375)
+    capo = ex(e, "2 * ($v1 + ($v2 - $v1) * $v3) - 1 - if($v1 < $v4, 2 * $v1 / $v4 - ($v1 / $v4) * ($v1 / $v4) - 1, "
+                 "if($v1 > 1 - $v4, (($v1 - 1) / $v4) * (($v1 - 1) / $v4) + 2 * ($v1 - 1) / $v4 + 1, 0))",
+              [ph, cq, cm, dt], 20, 400)
+    # B: hard-synced slave: wrap(phase * ratio), ratio swept by breath and puffs, capped below 7 kHz
+    r1 = add(e, chain(e, k1, ["*~ 3", "+~ 1"], 450, 300), mul(e, mul(e, br, k1, 550, 300), e.obj("sig~ 5", 650, 275), 550, 325), 450, 350)
+    rr = add(e, r1, chain(e, puff, ["*~ 2"], 650, 350), 450, 375)
+    cap = e.obj("/~", 600, 400)
+    e.c(e.obj("sig~ 7000", 600, 375), 0, cap, 0)
+    e.c(hz, 0, cap, 1)
+    rat = e.obj("min~", 450, 425)
+    e.c(rr, 0, rat, 0)
+    e.c(cap, 0, rat, 1)
+    syn = chain(e, mul(e, ph, rat, 450, 450), ["wrap~", "*~ 2", "-~ 1"], 450, 475)
+    # half-rate square sub, slightly rounded
+    sq = chain(e, chain(e, hz, ["*~ 0.5", "phasor~"], 650, 450), ["-~ 0.5", "*~ -1e+06", "clip~ -1 1", "*~ 0.15", "rpole~ 0.85"], 650, 500)
+    mix = ex(e, "$v1 * (1 - $v3 * 0.8) + $v2 * $v3 * 0.9 + $v4 * (0.25 + $v5 * 0.8)",
+             [capo, syn, k1, sq, e.obj("r~ eng-body~", 760, 600)], 20, 650)
+    # crackle: sparse clicks while puffing, a little breath hiss
+    crk = ex(e, "($v1 > 0.985 - $v2 * 0.06) * $v2 * 1.2 + $v1 * $v3 * 0.08", [e.obj("noise~", 900, 600), puff, lv], 900, 650)
+    pre = add(e, mix, crk, 20, 680)
+    # asymmetric diode clipper (even harmonics), drive from Snarl, breath and puffs
+    drv = add(e, add(e, chain(e, mul(e, k2, k2, 220, 680), ["*~ 7", "+~ 1"], 220, 705), chain(e, br, ["*~ 2"], 320, 705), 220, 755),
+              chain(e, puff, ["*~ 5"], 420, 705), 220, 780)
+    dio = ex(e, "if($v1 * $v2 > 0, $v1 * $v2 / (1 + $v1 * $v2), $v1 * $v2 / (1 - 1.8 * $v1 * $v2))", [pre, drv], 20, 810)
+    # vactrol: opens with breath at once, closes with a slow tail
+    tl = e.obj("*~ 0", 450, 810)
+    e.c(lv, 0, tl, 0)
+    e.c(tg, 0, tl, 1)
+    tr = e.obj("rpole~", 450, 835)
+    e.c(tl, 0, tr, 0)
+    e.c(tc, 1, tr, 1)
+    vac = e.obj("max~", 300, 885)
+    e.c(lv, 0, vac, 0)
+    e.c(chain(e, tr, ["*~ 0.92"], 450, 860), 0, vac, 1)
+    vg = chain(e, add(e, vac, chain(e, puff, ["*~ 0.3"], 400, 885), 300, 910), ["clip~ 0 1"], 300, 935)
+    # gate filter: two one-poles; cutoff = 70 Hz * 2^(gate*6.2 + Tone*2.4 + timbre) via mtof~;
+    # coefficient a = 1 - w (w = 2 pi fc / sr, kept below 0.9)
+    sm = add(e, add(e, chain(e, vg, ["*~ 74.4"], 300, 960), chain(e, k3, ["*~ 28.8"], 400, 960), 300, 985),
+             chain(e, tb, ["*~ 16.8"], 500, 960), 300, 1010)
+    w = chain(e, sm, ["+~ 16.9", "mtof~", f"*~ {6.2832 / SR:.8f}", "clip~ 0.002 0.9"], 300, 1035)
+    a_ = chain(e, w, ["*~ -1", "+~ 1"], 450, 1135)
+    st = dio
+    for i in range(2):
+        g = mul(e, st, w, 20 + i * 120, 860 + i * 60)
+        rp = e.obj("rpole~", 20 + i * 120, 885 + i * 60)
+        e.c(g, 0, rp, 0)
+        e.c(a_, 0, rp, 1)
+        st = rp
+    # VCA side of the gate (gate^1.5), DC blocker, out
+    out = mul(e, st, mul(e, vg, chain(e, vg, ["sqrt~"], 260, 975), 200, 1000), 20, 1000)
+    e.c(chain(e, out, ["rzero~ 1", "rpole~ 0.995", "*~ 0.6"], 20, 1025), 0, e.obj("outlet~", 20, 1110), 0)
+    e.save(path)
+
 ENGINES = {
     "volt": (volt, "Fold Grit Detune Tone", "0.3 0.2 0.35 0.55"),
     "halo": (halo, "Shimmer Resonance Air Bloom", "0.5 0.5 0.35 0.5"),
@@ -431,6 +527,7 @@ ENGINES = {
     "velvet": (velvet, "Cutoff Spread Swell Warmth", "0.5 0.5 0.5 0.4"),
     "steel": (steel, "Tone Sustain Steel Attack", "0.55 0.5 0.35 0.3"),
     "lyra": (lyra, "Mod Sharp Detune Drive", "0.3 0.25 0.35 0.3"),
+    "feral": (feral, "Sync Snarl Tone Tail", "0.35 0.4 0.45 0.3"),
 }
 
 

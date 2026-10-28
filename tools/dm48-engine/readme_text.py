@@ -45,6 +45,7 @@ SCREEN
 
 ENGINES (engines/ folder; add your own - see engines/README.txt)
  All engines load at start-up; switching while playing is a quick, pop-free fade (held notes carry over).
+ feral  raw/unstable/weird Sync Snarl Tone Tail
  volt   raw/electric      Fold Grit Detune Tone
  halo   ethereal/resonant Shimmer Resonance Air Bloom
  under  bass/subharmonic  Subs Drive Tone Octave

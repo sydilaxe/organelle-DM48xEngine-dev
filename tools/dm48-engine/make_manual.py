@@ -280,13 +280,14 @@ on a C harp the draw chord G-B-D-F becomes the pure 4:5:6:7 chord).</p>
 <div class="grid">{shot("page_fx", "FX")}{shot("tune_family", "TUNE: family, scale, key")}{shot("engine_monitor", "ENGINE: line 4 shows incoming MIDI")}{shot("page_library", "LIBRARY")}</div>
 
 <h2 class="pb">6. Engines</h2>
-<p>An engine is one voice; the patch runs eight. All six bundled engines react to breath in several small ways at once,
+<p>An engine is one voice; the patch runs eight. All seven bundled engines react to breath in several small ways at once,
 and they are level-matched, so switching doesn't jump in volume.</p>
 <p><b>Switching engines while you play.</b> Every engine is loaded once when the patch starts and stays switched off
 (costing nothing) until you choose it. Changing the engine fades the old one out and the new one in within about 30 ms,
 and the notes you are holding carry on with the new sound. Nothing is loaded at that moment, so there is no pop.
 Turning the engine knob quickly through several engines switches once, to where the knob stops.</p>
 <table><tr><th>Engine</th><th>Character</th><th>Knobs</th><th>What breath does</th></tr>
+<tr><td><b>Feral</b></td><td>raw, unstable, weird</td><td>Sync · Snarl · Tone · Tail</td><td>The most breath-hungry engine, built from scratch. A capacitor-charge oscillator bends from a smooth ramp into a charging curve as you blow, and a hard-synced second oscillator screams as breath sweeps its ratio (Sync sets the range). Everything goes through a vactrol low-pass gate: breath opens volume and brightness together, instantly, and it closes with a slow tail (Tail). Fast changes in breath — puffs and accents — jab the pitch sharp, kick the sync, add crackle and drive the asymmetric diode clipper (Snarl) harder. Soft breath is very quiet and dark; full breath is loud and bright, with a wide range in between.</td></tr>
 <tr><td><b>Volt</b></td><td>raw, electric</td><td>Fold · Grit · Detune · Tone</td><td>More wave-folding, more sample-rate grit, a brighter filter and a slight upward strain of pitch.</td></tr>
 <tr><td><b>Halo</b></td><td>ethereal, resonant</td><td>Shimmer · Resonance · Air · Bloom</td><td>Upper partials bloom in (Bloom sets how fast), breath noise rings two tuned resonators, which brighten.</td></tr>
 <tr><td><b>Under</b></td><td>bass, subharmonic</td><td>Subs · Drive · Tone · Octave</td><td>Deeper subharmonics (f/3, f/4) fade in, more saturation, the filter opens. Octave knob: 0, −1, −2.</td></tr>
@@ -406,15 +407,15 @@ so that single core is the budget. The patch is built for it:</p>
 <ul><li>Each voice switches its DSP off when silent, so only sounding voices cost anything. The audio looper's DSP is off until you first record; its 6 × 45 s of stereo buffers take about 95 MB of the M's 1 GB, reserved when the patch loads.</li>
 <li>Saws are band-limited without oversampling; filters are cheap 2-pole designs (Velvet cascades two for 4-pole warmth).</li>
 <li>All control logic is message-based; the arpeggiator, looper and screen run at control rate.</li></ul>
-<p>Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo is the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).
+<p>Measured offline with all 8 voices sounding, the engines use 2.7–4.9 % of one 2.1 GHz Xeon core (Halo and Feral are the heaviest, Under the lightest; Steel 3.7 %, Lyra 3.0 %).
 A Cortex-A53 core is very roughly 8–10× slower for this kind of work, so expect around 25–50 % of the Pd core on the Organelle M with eight
-voices held — less in normal playing. If you hear clicks, play fewer notes at once with Halo, or lower Reverb.</p>
+voices held — less in normal playing. If you hear clicks, play fewer notes at once with Halo or Feral, or lower Reverb.</p>
 
 <h2>14. Saving, files and troubleshooting</h2>
 <p>Settings <b>save themselves</b> two seconds after you change something (page settings to <code>settings.txt</code>, each engine's PLAY knobs to <code>engines.txt</code>, in the patch folder). <b>System › Save Patch</b> still works too. Loops are not saved. To go back to the defaults, delete <code>settings.txt</code>.</p>
 <pre>DM48 Engine/
   main.pd  voice.pd  README.txt  settings.txt  engines.txt
-  engines/   volt halo under velvet steel lyra (.pd + .txt)  lib/bsaw.pd  README.txt
+  engines/   feral volt halo under velvet steel lyra (.pd + .txt)  lib/bsaw.pd  README.txt
   tunings/   *.mid  TUNINGS.txt</pre>
 <table><tr><th>Problem</th><th>Check</th></tr>
 <tr><td>No sound</td><td>MIDI Setup › Device is the DM48X; reload the patch after plugging in; ENGINE line 4 shows incoming MIDI.</td></tr>

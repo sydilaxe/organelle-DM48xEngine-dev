@@ -16,7 +16,9 @@ from harness import run, audio, f0  # noqa: E402
 
 P = sys.argv[1] if len(sys.argv) > 1 else "../DM48 Engine"
 SR = 44100
-ENGINES = ["halo", "lyra", "steel", "under", "velvet", "volt"]
+ENGINES = ["feral", "halo", "lyra", "steel", "under", "velvet", "volt"]   # sorted, as on the ENGINE knob
+NE = len(ENGINES)
+HALO = (ENGINES.index("halo") + 0.5) / NE
 failures = []
 
 
@@ -55,8 +57,9 @@ check("loads without errors", not errors(log), "; ".join(errors(log)[:3]))
 ref = None
 
 # 2. every engine sounds, at the right pitch, and reacts to breath
-for i, name in enumerate(ENGINES):
-    ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {(i + 0.5) / 6}"),
+for name in sorted(ENGINES, key=lambda n: n != "halo"):     # Halo first: it sets the reference pitch
+    i = ENGINES.index(name)
+    ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {(i + 0.5) / NE}"),
           (900, "notesRaw 60 100"), (950, "notesRaw 60 0")]
     note(ev, 1500, 2, 57, 1500, 40)
     note(ev, 3500, 2, 57, 1500, 127)
@@ -84,7 +87,7 @@ check("no stuck notes after looper clear", rms(x, 5.0, 5.5) < 0.002, f"rms at 5 
 ev = [(300, "eng-in 0 2 57 100"), (301, "eng-in 4 2 11 100"), (500, "notesRaw 69 100"), (550, "notesRaw 69 0"),
       (600, "knob1 0.79")]
 for i, t in enumerate(range(1500, 9000, 1200)):
-    ev.append((t, f"knob1 {((i % 6) + 0.5) / 6}"))
+    ev.append((t, f"knob1 {((i % NE) + 0.5) / NE}"))
 ev += [(9500, "eng-in 0 2 57 0"), (10000, "knob2 0.5")]
 log = run(P, ev)
 x = audio(P).mean(1)
@@ -148,7 +151,7 @@ ev = []
 key(ev, 200, 64)
 ev += [(300, "knob3 0.5"), (310, "knob3 0"), (320, "knob4 0.5"), (330, "knob4 0")]
 key(ev, 400, 60)
-ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {0.5 / 6}"),
+ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {HALO}"),
        (470, "notesRaw 60 100"), (480, "notesRaw 60 0")]
 key(ev, 1500, 81)
 note(ev, 1520, 2, 57, 2100, 90)

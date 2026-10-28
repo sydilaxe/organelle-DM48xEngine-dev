@@ -2,7 +2,7 @@ import sys, warnings, numpy as np
 warnings.filterwarnings("ignore"); sys.path.insert(0,'.')
 from harness import run, audio, f0
 P="../DM48 Engine"; sr=44100
-names=["halo","lyra","steel","under","velvet","volt"]
+names=["feral","halo","lyra","steel","under","velvet","volt"]
 ev=[]
 def key(t,n,hold=60): ev.extend([(t,f"notesRaw {n} 100"),(t+hold,f"notesRaw {n} 0")])
 def note(t,ch,n,dur,br=100): ev.extend([(t,f"eng-in 0 {ch} {n} 100"),(t+1,f"eng-in 4 {ch} 11 {br}"),(t+dur,f"eng-in 0 {ch} {n} 0")])
@@ -10,7 +10,7 @@ key(500,81)                      # REC
 note(700,2,60,800)               # C4 (velvet)
 key(2500,81)                     # -> PLAY, loop = 2 s
 # morph to halo, then overdub G4 on top
-key(3000,69); ev.append((3100,"knob1 0.99")); ev.append((3200,f"knob1 {0.5/6}"))
+key(3000,69); ev.append((3100,"knob1 0.99")); ev.append((3200,f"knob1 {1.5/7}"))
 key(5000,60)                     # back to the PLAY page
 key(6500,81)                     # DUB
 note(6700,3,67,700)

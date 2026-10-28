@@ -4,7 +4,7 @@ from harness import run, audio, f0, centroid
 P="../DM48 Engine"; sr=44100
 names=["halo","lyra","steel","under","velvet","volt"]
 for bowk in (0.0, 0.4, 1.0):
-    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,f"knob1 {2.5/6}"),(300,"notesRaw 60 100"),(350,"notesRaw 60 0"),
+    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,f"knob1 {3.5/7}"),(300,"notesRaw 60 100"),(350,"notesRaw 60 0"),
         (500,"knob4 0.0"),(510,f"knob4 {bowk}"),(520,f"knob4 {bowk+0.0001}")]
     t=800; segs=[]
     for note in (45,57,69,81):

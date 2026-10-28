@@ -4,9 +4,9 @@ sys.path.insert(0,'.')
 from harness import run
 P="../DM48 Engine"
 res={}
-NM=["halo","lyra","steel","under","velvet","volt"]
+NM=["feral","halo","lyra","steel","under","velvet","volt"]
 for i,name in enumerate(NM):
-    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,f"knob1 {(i+0.5)/6}")]
+    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,f"knob1 {(i+0.5)/7}")]
     for v in range(8):
         ev.append((400, f"eng-live 0 {v+2} {48+v*4} 100")); ev.append((401, f"eng-live 4 {v+2} 11 110"))
     ev.append((20400,"eng-live 4 2 11 111"))
