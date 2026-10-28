@@ -162,7 +162,14 @@ x = audio(P).mean(1)
 cl = hf_clicks(x, 3.7, 14.9)
 check("no clicks in audio overdubs or at the loop seam", not cl, f"clicks at {cl[:5]}" if cl else "")
 
-# 9. glide and legato (VOICE page)
+# 9. clearing the audio loop (hold high A) leaves silence, Pre and Post (no stuck block repeating)
+from t_aclear import aclear_test
+for post in (False, True):
+    play, after, _ = aclear_test(P, post)
+    check(f"audio loop clear is silent ({'Post' if post else 'Pre'})", play > 0.02 and after < 0.001,
+          f"playing {play:.3f} after clear {after:.4f}")
+
+# 10. glide and legato (VOICE page)
 from t_glide import glide_tests
 g = glide_tests(P)
 mid = lambda tr, i: tr[i] if tr[i] is not None else 0

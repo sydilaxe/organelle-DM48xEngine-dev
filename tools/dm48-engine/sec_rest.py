@@ -395,7 +395,7 @@ def audio():
     dry0 = mul(a, to(a, a.obj("r~ eng-dry", 20, 200), "*~ 0.5", 20, 225), lvl, 20, 300)
     # audio looper: "pre" records here and plays back into the effects
     to(a, dry0, "s~ eng-tap-pre", 120, 325)
-    dry = add(a, dry0, a.obj("r~ eng-aret-pre", 120, 300), 20, 325)
+    dry = add(a, dry0, a.obj("catch~ eng-aret-pre", 120, 300), 20, 325)
     # ---- delay (stereo ping-pong): input -> L, L -> R, R -> L
     dtm = smooth(a, "eng-dtime", 150, 400, 200)
     thr = smooth(a, "eng-throw", 30, 550, 200)
@@ -505,7 +505,7 @@ def audio():
         sd = add(a, m1, rv, x, 1150)
         # audio looper: "post" records the finished sound here and plays back after the effects
         to(a, sd, f"s~ eng-tap-post{s_}", x + 200, 1150)
-        sides.append(add(a, sd, a.obj(f"r~ eng-aret-{s_}", x + 200, 1175), x, 1175))
+        sides.append(add(a, sd, a.obj(f"catch~ eng-aret-{s_}", x + 200, 1175), x, 1175))
     # level detector on L+R, gain = min(1, threshold / level)
     det = add(a, sides[0], sides[1], 800, 1175)
     to(a, det, "s~ eng-scope", 950, 1200)       # for the OLED scope

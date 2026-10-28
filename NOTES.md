@@ -32,6 +32,7 @@ This is the working memory for this project: read it first in any new session.
   - For `[pack]`, the hot inlet is the left one: feed it last.
 - **Dynamically created abstractions** (engines) do **not** get `loadbang`. Read shared values with `[r~ eng-...]` or global `[value]`s instead.
 - **`[switch~]` starts switched off.** Each mode subpatch needs an explicit `1`.
+- **Never put `[s~]` in a subpatch that gets switched off**: it keeps sending its last 64-sample block, which is a loud ~690 Hz tone. Use `[throw~]`/`[catch~]` (a switched-off throw~ adds nothing). This was the tone after clearing the audio loop.
 - **Signal objects:**
   - `vcf~`: the lowpass goes silent when cf/q exceeds about sr/2π. Keep q and cf in range.
   - `bob~` at oversample 1 is unstable above about 8 kHz.

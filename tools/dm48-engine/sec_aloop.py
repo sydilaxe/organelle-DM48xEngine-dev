@@ -159,9 +159,10 @@ def dsp():
     a.c(oL, 0, pre, 0)
     a.c(oR, 0, pre, 1)
     a.c(post, 0, pre, 2)
-    to(a, pre, "s~ eng-aret-pre", 20, 745)
+    # throw~ (not s~): when the looper's DSP is switched off a throw~ adds nothing, an s~ would repeat its last block
+    to(a, pre, "throw~ eng-aret-pre", 20, 745)
     for o, side, x in ((oL, "L", 300), (oR, "R", 450)):
-        to(a, mul2(a, o, post, x, 720), f"s~ eng-aret-{side}", x, 745)
+        to(a, mul2(a, o, post, x, 720), f"throw~ eng-aret-{side}", x, 745)
     # writer: newest layer = input x gate + what is already there x k (k = 0 during the first pass)
     gate = smooth_msg(a, "$0-agatesig", 8, 1100, 800)
     ksig = chain(a, a.obj("r $0-aksig", 1250, 800), ["sig~"], 1250, 825)
@@ -460,6 +461,7 @@ def control():
     to(a, rs, "s $0-afree", 20, 1900, outlet=8)
     to(a, rs, "s $0-ause", 100, 1900, outlet=7)
     send(a, rs, "1", "$0-adsp", 180, 1900, outlet=7)
+    to(a, rs, "s $0-adspcancel", 260, 1900, outlet=8)
     for i, (nm, v) in enumerate((("engastate", 2), ("engalen", 0), ("engaspd", 1), ("engatail", 0), ("engak", 0),
                                  ("engarecn", 0))):
         setv(a, rs, nm, v, 280 + i * 60, 1900, outlet=6)
@@ -600,12 +602,14 @@ def control():
     msg_to(a, cl, "; engaon const 0; engag const 0; engaage const 0" +
            "".join(f"; engov{j} const 0" for j in range(NL)), 420, 3050, outlet=5)
     for j in range(NL):
-        send(a, cl, "0 0", f"$0-ag{j}", 700 + j * 50, 3050, outlet=4)
+        send(a, cl, "0 20", f"$0-ag{j}", 700 + j * 50, 3050, outlet=4)      # fade out, then switch the DSP off
     for i, nm in enumerate(("engastate", "engalen", "engasync", "engatail", "engacnt", "engak")):
         setv(a, cl, nm, 0, 20 + i * 60, 3100, outlet=3)
     send(a, cl, "0", "$0-afreq", 400, 3100, outlet=2)
     send(a, cl, "0", "$0-alvlsig", 470, 3100, outlet=2)
-    send(a, cl, "0", "$0-adsp", 540, 3100, outlet=1)
+    adoff = to(a, cl, "delay 40", 540, 3075, outlet=1)
+    send(a, adoff, "0", "$0-adsp", 540, 3100)
+    a.c(msg_to(a, a.obj("r $0-adspcancel", 640, 3025), "stop", 640, 3050), 0, adoff, 0)   # a new take cancels it
     a.c(cl, 0, stat, 0)
 
     # ---------- speed (hold A + knob 1): [s eng-aloop-speed] v
