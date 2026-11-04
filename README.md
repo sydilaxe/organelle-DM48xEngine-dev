@@ -3,6 +3,8 @@
 Pure Data patches for the **Critter & Guitari Organelle M** (Raspberry Pi CM3, Organelle OS 5, Pd 0.53),
 built for the **Lekholm DM48X** MIDI harmonica (MPE + breath).
 
+**Latest release:** [v1.5](../../releases/tag/v1.5) · [all releases](../../releases)
+
 ## Patches (`patches/`)
 
 Copy a folder into the Organelle's `Patches` folder (USB stick or SD card).
