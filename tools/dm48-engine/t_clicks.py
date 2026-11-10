@@ -2,7 +2,7 @@
 A click = |second difference| far above the local level (median of the neighbourhood)."""
 import sys, warnings, numpy as np
 warnings.filterwarnings("ignore"); sys.path.insert(0,'.')
-from harness import run, audio
+from harness import run, audio, eng_knob
 P="../DM48 Engine"; SR=44100
 
 def clicks(x, a, b, db=18.0):
@@ -29,17 +29,17 @@ which = sys.argv[1:] or ["engine", "dub"]
 if "engine" in which:
     # a held note while switching engines several times
     ev=[]; fx_off(ev)
-    ev += [(500, "notesRaw 69 100"), (550, "notesRaw 69 0"), (560, "knob1 0.99"), (570, f"knob1 {1.5/7}"), (580, "notesRaw 60 100"), (590, "notesRaw 60 0"),
+    ev += [(500, "notesRaw 69 100"), (550, "notesRaw 69 0"), (560, "knob1 0.99"), (570, f"knob1 {eng_knob('halo')}"), (580, "notesRaw 60 100"), (590, "notesRaw 60 0"),
            (600, "eng-in 0 2 57 100"), (601, "eng-in 4 2 11 100"), (700, "notesRaw 69 100"), (750, "notesRaw 69 0"), (800, "knob1 0.79")]
     for i, t in enumerate(range(2000, 9000, 1500)):
-        ev.append((t, f"knob1 {((i % 7) + 0.5) / 7}"))
+        ev.append((t, f"knob1 {((i % 9) + 0.5) / 9}"))
     ev += [(9500, "eng-in 0 2 57 0"), (10000, "knob2 0.5")]
     run(P, ev); x = audio(P).mean(1)
     print("engine switches -> clicks at:", clicks(x, 1.0, 9.4))
 if "dub" in which:
     # a sustained base take, then a long sustained overdub over several passes
     ev=[]; fx_off(ev)
-    ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {1.5/7}"), (470, "notesRaw 60 100"), (480, "notesRaw 60 0")]  # Halo
+    ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {eng_knob('halo')}"), (470, "notesRaw 60 100"), (480, "notesRaw 60 0")]  # Halo
     key(ev, 1500, 81); note(ev, 1520, 2, 57, 2100, 90); key(ev, 3600, 81)          # base: A3 held through the take
     key(ev, 4000, 81); note(ev, 4050, 3, 64, 6500, 90); key(ev, 10800, 81)         # dub: E4 for ~3 passes
     ev.append((15000, "knob2 0.5"))
@@ -51,7 +51,7 @@ if "dub" in which:
 if "dubspeed" in which:
     for spd, v in (("2x", 0.78), ("reverse", 0.43)):
         ev=[]; fx_off(ev)
-        ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {1.5/7}"), (470, "notesRaw 60 100"), (480, "notesRaw 60 0")]
+        ev += [(430, "notesRaw 69 100"), (440, "notesRaw 69 0"), (450, "knob1 0.99"), (460, f"knob1 {eng_knob('halo')}"), (470, "notesRaw 60 100"), (480, "notesRaw 60 0")]
         key(ev, 1500, 81); note(ev, 1520, 2, 57, 2100, 90); key(ev, 3600, 81)
         ev += [(3800, "notesRaw 81 100"), (3830, "knob1 0.5"), (3840, f"knob1 {v}"), (3880, "notesRaw 81 0")]
         key(ev, 4000, 81); note(ev, 4050, 3, 64, 4500, 90); key(ev, 8800, 81)

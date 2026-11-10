@@ -12,11 +12,11 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import run, audio, f0  # noqa: E402
+from harness import run, audio, f0, ENGINE_NAMES  # noqa: E402
 
 P = sys.argv[1] if len(sys.argv) > 1 else "../DM48 Engine"
 SR = 44100
-ENGINES = ["feral", "halo", "lyra", "steel", "under", "velvet", "volt"]   # sorted, as on the ENGINE knob
+ENGINES = ENGINE_NAMES   # sorted, as on the ENGINE knob
 NE = len(ENGINES)
 HALO = (ENGINES.index("halo") + 0.5) / NE
 failures = []
@@ -75,6 +75,29 @@ for name in sorted(ENGINES, key=lambda n: n != "halo"):     # Halo first: it set
         abs(cents(fr, ref) - kk) for kk in (0, -1200, -2400)))
     ok = not errors(log) and loud > 0.02 and loud > soft * 1.2 and abs(dev) < 30
     check(f"engine {name}", ok, f"soft {soft:.3f} loud {loud:.3f} pitch {dev:+.0f} c")
+
+# 2b. every mode of the engines with mode knobs sounds (Hybrid: Source x Body, Doom: Chain)
+def knob_to(ev, t, k, v):
+    """PLAY knobs pick up relatively: push to 1, then 0, then the value"""
+    ev += [(t, f"knob{k} 1.0"), (t + 5, f"knob{k} 0.0"), (t + 10, f"knob{k} {v}")]
+
+
+for name, combos in (("hybrid", [(a, b) for a in range(4) for b in range(4)]), ("doom", [(a, None) for a in range(4)])):
+    i = ENGINES.index(name)
+    quiet = []
+    for a, b in combos:
+        ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {(i + 0.5) / NE}"),
+              (900, "notesRaw 60 100"), (950, "notesRaw 60 0")]
+        knob_to(ev, 1500, 1, (a + 0.5) / 4)              # after the engine switch (it restores the engine's knobs)
+        if b is not None:
+            knob_to(ev, 1550, 2, (b + 0.5) / 4)
+        note(ev, 2000, 2, 57, 1200, 110)
+        ev.append((3500, "knob3 0.3"))
+        log = run(P, ev)
+        lvl = rms(audio(P).mean(1), 2.5, 3.1)
+        if errors(log) or not 0.03 < lvl < 0.5:
+            quiet.append(f"{a}/{b}: {lvl:.3f}")
+    check(f"every {name} mode sounds", not quiet, "; ".join(quiet[:4]))
 
 # 3. a repeated note-on never leaves a voice stuck (looper clear)
 ev = [(500, "eng-proc 0 18 60 100"), (501, "eng-proc 4 18 11 100"), (800, "eng-proc 0 18 60 100"),

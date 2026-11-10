@@ -2,6 +2,14 @@
 import os, sys, subprocess, shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pdgen import Canvas
+# the engines as they appear on the ENGINE knob (sorted file names); knob value that selects one
+ENGINE_NAMES = ["doom", "feral", "halo", "hybrid", "lyra", "steel", "under", "velvet", "volt"]
+
+
+def eng_knob(name):
+    return (ENGINE_NAMES.index(name) + 0.5) / len(ENGINE_NAMES)
+
+
 PRINTS = ["screenLine1", "screenLine2", "screenLine3", "screenLine4", "screenLine5", "led", "LOAD", "dmx-sent",
           "eng-loopstat", "midiOutGate", "eng-load", "snap"]
 def run(patchdir, events, wav="h.wav", extra_prints=()):

@@ -11,7 +11,7 @@ Copy a folder into the Organelle's `Patches` folder (USB stick or SD card).
 
 | Patch | What it is |
 |---|---|
-| **DM48 Engine** | The main project. An 8-voice MPE breath synth host with plug-in engines (Feral, Volt, Halo, Under, Velvet, Steel, Lyra). Includes legato (mono) and polyphonic glide, an MPE MIDI looper (reverse/speed), an audio looper, a breath arpeggiator, delay, an FDN reverb with freeze and a limiter, MIDI echo and clock with tap tempo, 78 scales in 10 families (just intonation, world tunings) and a DM48X tuning librarian. Manual: `docs/DM48 Engine Manual.pdf`. |
+| **DM48 Engine** | The main project. An 8-voice MPE breath synth host with plug-in engines (Feral, Volt, Halo, Under, Velvet, Steel, Lyra, Hybrid, Doom). Includes legato (mono) and polyphonic glide, an MPE MIDI looper (reverse/speed), an audio looper, a breath arpeggiator, delay, an FDN reverb with freeze and a limiter, MIDI echo and clock with tap tempo, 78 scales in 10 families (just intonation, world tunings) and a DM48X tuning librarian. Manual: `docs/DM48 Engine Manual.pdf`. |
 
 ## Source (`tools/`)
 
@@ -21,7 +21,7 @@ The patches are **generated** by Python scripts, so they can be rebuilt and test
   - `./build.sh` rebuilds `patches/DM48 Engine` and the manual.
   - `gen_all.py` assembles the patch; `gen_engines.py` holds the engines and `engines/README.txt` (the engine contract); `sec_*.py` are the host sections (MIDI, keys, looper, UI, library, audio FX, MIDI out, arpeggiator, OLED); `make_scales.py` and `astral_scales.json` hold the scale data.
   - Tests: `t_*.py` with `harness.py`, which runs the patch offline in Pd with timed events and records audio. `tload.sh` is a quick load check.
-  - `gen_hybrid.py` is a **work in progress** (Hybrid engine, see NOTES.md).
+  - `gen_hybrid.py` holds the engines with mode knobs (Hybrid, Doom).
 
 Requirements for building and testing: Python 3, numpy, Pure Data 0.53+ (`pd -batch`), and Chromium for the manual PDF.
 

@@ -3,10 +3,10 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0,'.')
 from harness import run, audio, f0, centroid
 P="../DM48 Engine"; sr=44100
-names=["feral","halo","lyra","steel","under","velvet","volt"]
+from harness import ENGINE_NAMES as names
 for name in sys.argv[1:]:
     i=names.index(name)
-    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,f"knob1 {(i+0.5)/7}"),(300,"notesRaw 60 100"),(350,"notesRaw 60 0")]
+    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,f"knob1 {(i+0.5)/len(names)}"),(300,"notesRaw 60 100"),(350,"notesRaw 60 0")]
     t=600; segs=[]
     for note in (45,57,69,81):
         for br in (30,80,127):

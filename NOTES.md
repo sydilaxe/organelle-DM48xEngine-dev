@@ -102,6 +102,7 @@ This is the working memory for this project: read it first in any new session.
   - The engine gets "source 0" then "pitch ms". A bend during a glide uses the remaining glide time.
   - VOICE values are saved after the engine name in settings.txt (`SAVED_TAIL`), so older settings files still load.
 - **Feral** (built from scratch, no shared parts): capacitor-charge osc (ramp blended with a sin quarter by breath²) with poly-BLEP, hard-synced slave (wrap~(phase × ratio)), half-rate square sub, puff detector (rzero~ differentiator → rpole~ hold), vactrol LPG (max~ of breath and a slow rpole~ tail; one-poles with a = 1 − w), asymmetric diode clipper. No expr~ at all: per-sample expr~ is slow, so the first version (25 expr~) cost 2.5× the other engines.
+- **Hybrid / Doom** (`gen_hybrid.py`): modes are `switch~` subpatches picked by a control knob (`modes()`: int(v × n)); selecting fades in 10 ms, deselecting fades out and switches off 20 ms later. A mode's `delwrite~`s, and the Strings body's filters, are cleared when it is switched on (`[s $0-on-<mode>]`), else old contents ring out as a click; Strings is fed through a 30 ms ramp so the combs build up. Per-mode level trims (`gains=`) keep all 16 Hybrid combinations within ~2.5 dB. Knob changes made right after an engine switch are overwritten when the engine restores its saved knobs (tests wait ~1 s). Test engine knob positions with `harness.eng_knob(name)` / `ENGINE_NAMES`, never a hard-coded count.
 - **Steel** has no pluck: breath is the bow. Knob 4 Attack = minimum rise time of the breath level (5 ms – 2 s).
 - **Voice allocation:** one voice per key. A repeated note-on first releases the key, and orphan note-offs are dropped (`engkeyon`). This fixed stuck notes after clearing the looper.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).
@@ -114,26 +115,19 @@ This is the working memory for this project: read it first in any new session.
 | Source | Idea | Status |
 |---|---|---|
 | VerbRack | 8-line FDN reverb, knob pickup modes, auto-save | done |
-| SuperSynth | each oscillator shape in its own `switch~` subpatch | used in Hybrid (WIP) |
-| vcs.cc (CC BY-NC-SA) | pitch-dependent caps on folding and drive (anti-alias), STK reed, sr/8 control block, CZ phase distortion | caps done; CZ in Hybrid |
+| SuperSynth | each oscillator shape in its own `switch~` subpatch | used in Hybrid and Doom |
+| vcs.cc (CC BY-NC-SA) | pitch-dependent caps on folding and drive (anti-alias), STK reed, sr/8 control block, CZ phase distortion | caps done; CZ in Hybrid; sr/8 control block in all engines |
 | KnightSky | soft limiter inside the feedback loop, re-pitched freeze, exciter, OLED dirty-row redraw | ideas |
 | Big Bottom (WTFPL) | wavetable band-limited saws, shared modulation bus, drift | ideas |
 | Wave Folds | `pd~` for multi-core voices, crossfaded mode switches | ideas |
-| DOOM_SYNTH (BSD + Commons Clause) | breath-ducked dirty parallel chains, rational tanh, pitched noise grit, spring reverb | planned: Doom × Lyra hybrid |
-| Elements / Rings / Braids / Clouds (MI ports, externals) | modal tuning f·n·(1+g·n²), sympathetic strings, vowel formants, Clouds-lite granular | in Hybrid / roadmap |
+| DOOM_SYNTH (BSD + Commons Clause) | breath-ducked dirty parallel chains, rational tanh, pitched noise grit, spring reverb | done: Doom engine |
+| Elements / Rings / Braids / Clouds (MI ports, externals) | modal tuning f·n·(1+g·n²), sympathetic strings, vowel formants, Clouds-lite granular | modal, strings, vowel in Hybrid; Clouds-lite on the roadmap |
 | Juno-104, NESWave, DUST, Mellotron, PLAY | delayed vibrato, PWM sub, tape wow, breath-gated tape | ideas |
 
 ## Roadmap
-1. **Hybrid engine** (`tools/dm48-engine/gen_hybrid.py`, WIP). Two mode knobs:
-   - SOURCE: CZ Phase, Vowel formant, Juno Pulse+sub, Breath noise.
-   - BODY: Filter, Modal (Elements), Sympathetic Strings (Rings), Tube.
-   - Each mode is its own `switch~` subpatch.
-   - Knob 3 is Color (source) and knob 4 is Shape (body).
-2. **Doom × Lyra hybrid:**
-   - Lyra's cross-modulated triangles feed DOOM-style chains (RIP dist/bitcrush, TEAR phaser, METAL spring, FLESH feedback distortion), as `switch~` modes.
-   - Breath moves from clean to dirty, ducked as in DOOM's sidecomp.
-3. **Ideas to evaluate:**
+1. **Hybrid** and **Doom** engines: done (`gen_hybrid.py`).
+2. **Ideas to evaluate:**
    - Clouds-lite granular master stage, breath-driven.
    - A sympathetic-strings bus.
    - OLED dirty-row redraw.
-4. **Test on the real hardware:** MIDI out, clock, CPU and the speaker pop.
+3. **Test on the real hardware:** MIDI out, clock, CPU and the speaker pop.

@@ -280,7 +280,7 @@ on a C harp the draw chord G-B-D-F becomes the pure 4:5:6:7 chord).</p>
 <div class="grid">{shot("page_fx", "FX")}{shot("tune_family", "TUNE: family, scale, key")}{shot("engine_monitor", "ENGINE: line 4 shows incoming MIDI")}{shot("page_library", "LIBRARY")}</div>
 
 <h2 class="pb">6. Engines</h2>
-<p>An engine is one voice; the patch runs eight. All seven bundled engines react to breath in several small ways at once,
+<p>An engine is one voice; the patch runs eight. All nine bundled engines react to breath in several small ways at once,
 and they are level-matched, so switching doesn't jump in volume.</p>
 <p><b>Switching engines while you play.</b> Every engine is loaded once when the patch starts and stays switched off
 (costing nothing) until you choose it. Changing the engine fades the old one out and the new one in within about 30 ms,
@@ -293,8 +293,10 @@ Turning the engine knob quickly through several engines switches once, to where 
 <tr><td><b>Under</b></td><td>bass, subharmonic</td><td>Subs · Drive · Tone · Octave</td><td>Deeper subharmonics (f/3, f/4) fade in, more saturation, the filter opens. Octave knob: 0, −1, −2.</td></tr>
 <tr><td><b>Velvet</b></td><td>lush analog pad</td><td>Cutoff · Spread · Swell · Warmth</td><td>The filter opens, the three saws spread wider, warmth and a slow pitch drift deepen. Swell softens the attack.</td></tr>
 <tr><td><b>Steel</b></td><td>pedal steel string</td><td>Tone · Sustain · Steel · Attack</td><td>A waveguide string bowed by breath (no pluck): breath is the volume pedal and the bow, brightens the string and adds a little drive. Attack sets how fast the sound swells in when you blow, from 5 ms (instant) to 2 s (a slow volume-pedal swell). Steel adds the stiff, metallic stretch of the partials.</td></tr>
-<tr><td><b>Lyra</b></td><td>LIRA-8 style drone</td><td>Mod · Sharp · Detune · Drive</td><td>Two triangle oscillators modulate each other. Breath deepens the cross-modulation, sharpens the waves toward squares, widens the beating and pushes the drive. Pitch stays steady.</td></tr></table>
-<p>Steel is based on <b>Steelie</b> by gur_shulman (WTFPL). Lyra is based on <b>LIRA-8</b> by Miguel Moreno (BSD licence; after the Soma Laboratory Lyra-8).</p>
+<tr><td><b>Lyra</b></td><td>LIRA-8 style drone</td><td>Mod · Sharp · Detune · Drive</td><td>Two triangle oscillators modulate each other. Breath deepens the cross-modulation, sharpens the waves toward squares, widens the beating and pushes the drive. Pitch stays steady.</td></tr>
+<tr><td><b>Hybrid</b></td><td>source × body, 16 combinations</td><td>Source · Body · Color · Shape</td><td><b>Source</b> (knob value 0–24 Phase, 25–49 Vowel, 50–74 Pulse, 75–100 Breath): CZ-style phase distortion with a resonant wave (breath is the brightness envelope); a formant voice that breath and Color move through u-o-a-e-i; a Juno-style pulse with PWM (breath speeds and widens it) and a sub an octave down; or pitched breath noise with a flute tone. <b>Body</b> (same ranges: Filter, Modal, Strings, Tube): a resonant low-pass that breath opens; a 4-mode resonator that Shape bends from string to bell; three sympathetic strings at f, 2f and 3f that ring along (Shape = sustain); or a tube-like saturation that breath drives harder. Color shapes the source, Shape the body. Only the chosen source and body run; turning either knob crossfades in 10 ms.</td></tr>
+<tr><td><b>Doom</b></td><td>clean drone into a dirty chain</td><td>Chain · Mod · Dirt · Tone</td><td>Lyra-style cross-modulating triangles (Mod) feed one dirty chain (Chain: 0–24 Rip, 25–49 Tear, 50–74 Metal, 75–100 Flesh): Rip is hard drive into a bitcrusher and sample-rate reduction; Tear a swept 4-stage phaser; Metal inharmonic ring modulation into a dispersive spring-like echo; Flesh a saturating feedback loop. Breath pushes the sound from clean to dirty (Dirt sets how far) and ducks the clean side. Tone is the final low-pass.</td></tr></table>
+<p>Steel is based on <b>Steelie</b> by gur_shulman (WTFPL). Lyra is based on <b>LIRA-8</b> by Miguel Moreno (BSD licence; after the Soma Laboratory Lyra-8). Doom's chains follow ideas from <b>DOOM_SYNTH</b>, and Hybrid's sources and bodies ideas from Casio CZ, Braids, Elements and Rings; all are reimplementations, no code was copied.</p>
 <p>CC 74 (MPE timbre, if your controller sends it) also brightens each engine per note.</p>
 
 <h2>7. Looper</h2>
@@ -407,15 +409,15 @@ so that single core is the budget. The patch is built for it:</p>
 <ul><li>Each voice switches its DSP off when silent, so only sounding voices cost anything. The audio looper's DSP is off until you first record; its 6 × 45 s of stereo buffers take about 95 MB of the M's 1 GB, reserved when the patch loads.</li>
 <li>Saws are band-limited without oversampling; filters are cheap 2-pole designs (Velvet cascades two for 4-pole warmth).</li>
 <li>All control logic is message-based; the arpeggiator, looper and screen run at control rate.</li></ul>
-<p>The effects, the looper and all seven engines use only Pd's fast built-in signal objects — no <code>expr~</code>, which is slow on the Organelle's ARM processor. Each engine computes its costliest slow signals (pitch, partial levels, filter curves) at an eighth of the sample rate, and the audio looper only runs the layers you have recorded. Measured offline with all 8 voices sounding, the engines use 0.75–1.9 % of one 2.1 GHz Xeon core on top of the effects (Under the lightest, Steel the heaviest), up to 40 % less than before (Halo −41 %, Under −25 %, Lyra −22 %, Feral −22 %, Velvet −15 %); the audio looper adds 0.15–0.3 %, about a third less.
+<p>The effects, the looper and all engines use only Pd's fast built-in signal objects — no <code>expr~</code>, which is slow on the Organelle's ARM processor. Each engine computes its costliest slow signals (pitch, partial levels, filter curves) at an eighth of the sample rate, and the audio looper only runs the layers you have recorded. Measured offline with all 8 voices sounding, the engines use 0.75–1.9 % of one 2.1 GHz Xeon core on top of the effects (Under the lightest, Steel the heaviest; Hybrid 1.0–2.8 % depending on the source and body, Vowel into Modal the heaviest; Doom 1.6–2.0 %), up to 40 % less than before (Halo −41 %, Under −25 %, Lyra −22 %, Feral −22 %, Velvet −15 %); the audio looper adds 0.15–0.3 %, about a third less.
 A Cortex-A53 core is very roughly 8–10× slower for this kind of work, so expect around 25–50 % of the Pd core on the Organelle M with eight
-voices held — less in normal playing. If you hear clicks, play fewer notes at once with Steel, or lower Reverb.</p>
+voices held — less in normal playing. If you hear clicks, play fewer notes at once with Steel or Hybrid's Vowel/Strings, or lower Reverb.</p>
 
 <h2>14. Saving, files and troubleshooting</h2>
 <p>Settings <b>save themselves</b> two seconds after you change something (page settings to <code>settings.txt</code>, each engine's PLAY knobs to <code>engines.txt</code>, in the patch folder). <b>System › Save Patch</b> still works too. Loops are not saved. To go back to the defaults, delete <code>settings.txt</code>.</p>
 <pre>DM48 Engine/
   main.pd  voice.pd  README.txt  settings.txt  engines.txt
-  engines/   feral volt halo under velvet steel lyra (.pd + .txt)  lib/bsaw.pd  README.txt
+  engines/   feral volt halo under velvet steel lyra hybrid doom (.pd + .txt)  lib/bsaw.pd  README.txt
   tunings/   *.mid  TUNINGS.txt</pre>
 <table><tr><th>Problem</th><th>Check</th></tr>
 <tr><td>No sound</td><td>MIDI Setup › Device is the DM48X; reload the patch after plugging in; ENGINE line 4 shows incoming MIDI.</td></tr>

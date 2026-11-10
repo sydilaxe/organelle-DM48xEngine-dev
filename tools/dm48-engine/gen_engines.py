@@ -623,6 +623,8 @@ ENGINES = {
 
 
 def build(out_dir):
+    import gen_hybrid                                     # Hybrid and Doom (engines with switchable modes)
+    ENGINES.update(gen_hybrid.ENGINES)
     ed = os.path.join(out_dir, "engines")
     os.makedirs(os.path.join(ed, "lib"), exist_ok=True)
     bsaw(os.path.join(ed, "lib", "bsaw.pd"))

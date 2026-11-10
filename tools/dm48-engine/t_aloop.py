@@ -1,6 +1,6 @@
 import sys, warnings, numpy as np
 warnings.filterwarnings("ignore"); sys.path.insert(0,'.')
-from harness import run, audio, f0
+from harness import run, audio, f0, eng_knob
 P="../DM48 Engine"; sr=44100
 names=["feral","halo","lyra","steel","under","velvet","volt"]
 ev=[]
@@ -10,7 +10,7 @@ key(500,81)                      # REC
 note(700,2,60,800)               # C4 (velvet)
 key(2500,81)                     # -> PLAY, loop = 2 s
 # morph to halo, then overdub G4 on top
-key(3000,69); ev.append((3100,"knob1 0.99")); ev.append((3200,f"knob1 {1.5/7}"))
+key(3000,69); ev.append((3100,"knob1 0.99")); ev.append((3200,f"knob1 {eng_knob('halo')}"))
 key(5000,60)                     # back to the PLAY page
 key(6500,81)                     # DUB
 note(6700,3,67,700)

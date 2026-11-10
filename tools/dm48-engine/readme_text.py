@@ -52,6 +52,10 @@ ENGINES (engines/ folder; add your own - see engines/README.txt)
  velvet lush VA pad       Cutoff Spread Swell Warmth
  steel  pedal steel string Tone Sustain Steel Attack
  lyra   LIRA-8 drone voice Mod Sharp Detune Drive
+ hybrid source x body      Source Body Color Shape
+        Source: Phase Vowel Pulse Breath / Body: Filter Modal Strings Tube (knob quarters)
+ doom   drone + dirt chain Chain Mod Dirt Tone
+        Chain: Rip Tear Metal Flesh (knob quarters); breath pushes clean -> dirty
 
 Steel is after Steelie by gur_shulman (WTFPL); Lyra is after LIRA-8 by Miguel Moreno (BSD licence).
 

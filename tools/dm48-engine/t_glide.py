@@ -1,12 +1,12 @@
 """Glide / legato checks (VOICE page), Halo engine. Returns pitch tracks; used by ci_check.py too."""
 import sys, numpy as np
-from harness import run, audio, f0
+from harness import run, audio, f0, eng_knob
 SR = 44100
 
 
 def setup(mode, glide, when, frm):
     """Halo engine, then VOICE page: knob1 mode, knob2 glide (relative knob: 0 first), knob3 when, knob4 from."""
-    return [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {1.5 / 7}"),
+    return [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {eng_knob('halo')}"),
             (400, "notesRaw 66 100"), (450, "notesRaw 66 0"),
             (500, f"knob1 {0.9 if mode else 0.1}"), (520, "knob2 0"), (540, f"knob2 {glide}"),
             (560, f"knob3 {0.9 if when else 0.1}"), (580, f"knob4 {0.9 if frm else 0.1}")]

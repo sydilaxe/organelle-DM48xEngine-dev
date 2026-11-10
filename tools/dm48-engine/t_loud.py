@@ -2,11 +2,11 @@ import sys, warnings, numpy as np
 warnings.filterwarnings("ignore"); sys.path.insert(0,'.')
 from harness import run, audio
 P="../DM48 Engine"; sr=44100
-names=["feral","halo","lyra","steel","under","velvet","volt"]
+from harness import ENGINE_NAMES as names
 res={}
 for name in names:
     i=names.index(name)
-    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,"knob1 0.99"),(300,f"knob1 {(i+0.5)/7}"),(900,"notesRaw 60 100"),(950,"notesRaw 60 0"),
+    ev=[(100,"notesRaw 69 100"),(150,"notesRaw 69 0"),(200,"knob1 0.99"),(300,f"knob1 {(i+0.5)/len(names)}"),(900,"notesRaw 60 100"),(950,"notesRaw 60 0"),
         (1000,"notesRaw 64 100"),(1050,"notesRaw 64 0"),(1100,"knob3 0.5"),(1110,"knob3 0.0"),(1120,"knob4 0.5"),(1130,"knob4 0.0")]  # FX: dry only
     t=1500; segs=[]
     for br in (60,100,127):
