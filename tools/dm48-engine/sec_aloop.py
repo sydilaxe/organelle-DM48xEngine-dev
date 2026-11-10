@@ -95,15 +95,37 @@ def dsp():
     a.c(a.obj("r $0-aphase", 680, 80), 0, ph, 1)
     # each layer has its own length and direction (it was recorded at some loop speed):
     # read index = phase x A + B, with A = +-(samples per loop pass), B = 0 (forward) or the length (reverse)
-    lidx = []
+    # Each layer is its own subpatch that only runs while its gain is not 0 (switched off 100 ms after a fade to 0),
+    # so unused layers cost nothing. A switched-off subpatch's outlet~ gives zeros (and the gain is 0 by then).
+    # (Not throw~/catch~: Pd runs a catch~ before the layers, so the loop would come out a block late.)
+    sums = [None, None]
     for j in range(NL):
-        ia = a.obj("*~ 0", 600 + j * 120, 140)
-        a.c(ph, 0, ia, 0)
-        a.c(a.obj(f"r $0-alayA{j}", 650 + j * 120, 115), 0, ia, 1)
-        ib = a.obj("+~ 0", 600 + j * 120, 165)
-        a.c(ia, 0, ib, 0)
-        a.c(a.obj(f"r $0-alayB{j}", 650 + j * 120, 140), 0, ib, 1)
-        lidx.append(ib)
+        ly = Canvas(f"layer{j}", w=700, h=400)
+        ly.comment("one layer: runs only while its gain is not 0", 20, 5)
+        lin = ly.obj("inlet~", 20, 30)
+        ia = ly.obj("*~ 0", 20, 60)
+        ly.c(lin, 0, ia, 0)
+        ly.c(ly.obj(f"r $0-alayA{j}", 80, 35), 0, ia, 1)
+        ib = ly.obj("+~ 0", 20, 85)
+        ly.c(ia, 0, ib, 0)
+        ly.c(ly.obj(f"r $0-alayB{j}", 80, 60), 0, ib, 1)
+        gt = chain(ly, ly.obj(f"r $0-ag{j}", 300, 30), ["t a a"], 300, 55)
+        g = to(ly, gt, "line~", 300, 85)
+        sw = ly.obj("switch~", 450, 205)
+        gz = chain(ly, gt, ["unpack 0 0", "sel 0"], 450, 80, outlet=1)
+        off = to(ly, gz, "delay 100", 450, 130)
+        ly.c(msg_to(ly, off, "0", 450, 155), 0, sw, 0)
+        on = to(ly, gz, "t b b", 550, 130, outlet=1)
+        ly.c(msg_to(ly, on, "stop", 600, 155, outlet=1), 0, off, 0)
+        ly.c(msg_to(ly, on, "1", 550, 155), 0, sw, 0)
+        for side, x in (("L", 20), ("R", 160)):
+            rd = to(ly, ib, f"tabread4~ enga{side}{j}", x, 120)
+            to(ly, mul2(ly, rd, g, x, 150), "outlet~", x, 175)
+        lb = a.sub(ly, 20 + j * 160, 220)
+        a.c(ph, 0, lb, 0)
+        for k in (0, 1):
+            sums[k] = (lb, k) if sums[k] is None else add2(a, sums[k], (lb, k), 20 + j * 160 + k * 60, 260)
+    sumL, sumR = sums
     widx = a.obj("*~ 0", 1400, 140)
     a.c(ph, 0, widx, 0)
     a.c(a.obj("r $0-awA", 1450, 115), 0, widx, 1)
@@ -114,21 +136,6 @@ def dsp():
     a.c(ph, 0, sn, 0)
     a.c(a.obj("r $0-asnap", 830, 115), 0, sn, 0)
     to(a, sn, "v engaph", 750, 165)
-    # layers
-    sums = []
-    for side in "LR":
-        acc = None
-        for j in range(NL):
-            x = 20 + j * 160 + (0 if side == "L" else 1000)
-            rd = a.obj(f"tabread4~ enga{side}{j}", x, 220)
-            a.c(lidx[j], 0, rd, 0)
-            g = smooth_msg(a, f"$0-ag{j}", 60, x + 80, 195) if side == "L" else gains[j]
-            if side == "L":
-                gains_tmp.append(g)
-            m = mul2(a, rd, g, x, 270)
-            acc = m if acc is None else add2(a, acc, m, x, 295)
-        sums.append(acc)
-    sumL, sumR = sums
     # pitch shifter: two crossfaded delay taps per side, in its own subpatch that only runs while the pitch is
     # not 0 (switched off 100 ms after the bypass fade). Speed and window glide, so turning the knob is smooth.
     ps = Canvas("pitch-shift", w=1200, h=700)
@@ -143,18 +150,22 @@ def dsp():
     rate = chain(ps, msg_to(ps, ps.obj("r $0-apsrate", 20, 30), "$1 30", 20, 55), ["line~"], 20, 80)
     win = chain(ps, msg_to(ps, ps.obj("r $0-apswin", 200, 30), "$1 60", 200, 55), ["line~"], 200, 80)
     pph = to(ps, rate, "phasor~", 20, 105)
+    # the two taps' delay times and windows are the same for both sides
+    taps = []
+    for k, dx in ((0, 0), (0.5, 250)):
+        p = to(ps, pph, f"+~ {k}", 20 + dx, 200)
+        w = to(ps, p, "wrap~", 20 + dx, 225)
+        d = mul2(ps, w, win, 20 + dx, 250)
+        wnd = chain(ps, w, ["-~ 0.5", "*~ 0.5", "cos~"], 20 + dx + 120, 250)
+        taps.append((d, wnd))
     for side, x in (("L", 20), ("R", 600)):
         src = ps.obj(f"r~ $0-apin{side}", x, 140)
         to(ps, src, f"delwrite~ $0-aps{side} 400", x, 165)
-        taps = []
-        for k, dx in ((0, 0), (0.5, 250)):
-            p = to(ps, pph, f"+~ {k}", x + dx, 200)
-            w = to(ps, p, "wrap~", x + dx, 225)
-            d = mul2(ps, w, win, x + dx, 250)
-            rd = to(ps, d, f"vd~ $0-aps{side}", x + dx, 275)
-            wnd = chain(ps, w, ["-~ 0.5", "*~ 0.5", "cos~"], x + dx + 120, 275)
-            taps.append(mul2(ps, rd, wnd, x + dx, 350))
-        to(ps, add2(ps, taps[0], taps[1], x, 380), f"throw~ $0-apout{side}", x, 405)
+        outs = []
+        for (d, wnd), dx in zip(taps, (0, 250)):
+            rd = to(ps, d, f"vd~ $0-aps{side}", x + dx, 330)
+            outs.append(mul2(ps, rd, wnd, x + dx, 360))
+        to(ps, add2(ps, outs[0], outs[1], x, 390), f"throw~ $0-apout{side}", x, 415)
     a.sub(ps, 1300, 300)
     byp = smooth_msg(a, "$0-apson", 40, 1600, 330)
     shifted = []
@@ -190,10 +201,6 @@ def dsp():
     lv = chain(a, add2(a, inL, inR, 1100, 1000), ["env~ 2048 1024"], 1100, 1030)
     to(a, lv, "v engapk", 1100, 1080)
     return a
-
-
-gains_tmp = []
-gains = gains_tmp
 
 
 def control():
@@ -659,7 +666,6 @@ def control():
 def aloop():
     c = Canvas("audio-looper", w=600, h=200)
     c.comment("Audio looper (see sec_aloop.py): signal part + control part", 20, 5)
-    gains_tmp.clear()
     c.sub(dsp(), 20, 40)
     c.sub(control(), 20, 80)
     return c
