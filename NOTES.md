@@ -42,7 +42,7 @@ This is the working memory for this project: read it first in any new session.
   - Every engine computes its slow signals in a `pd ctl` subpatch at sr/8 (`Ctl` in `gen_engines.py`): pitch → Hz, breath × Breath>Tone, knob curves, cutoffs, partial amplitudes, Halo's `pow~`s, Feral's puff detector / wander / vactrol / gate cutoff. Out via `outlet~ hold` (an 8-sample step in a frequency or cutoff is inaudible); `lin` only for Feral's VCA. One-pole coefficients inside are a^8 and differentiators ×1/8 (same time constants); noise~ into a slow lowpass is ×1/√8 (same depth). No `r~` inside (block size must match its `s~`): pass signals in with `c.i()`. Never feed a ctl output back into the same ctl (DSP loop: Under's octave is multiplied inside for that reason).
   - `lib/bsaw`: the old naive saw + step + wrap~ cancelled out; now `u = phase - 0.5` minus the cos correction (same waveform, half a cycle later), 6 fewer objects.
   - Audio looper: each layer is its own `switch~` subpatch, on while its gain target is not 0 (off 100 ms after a fade to 0), out via `outlet~` (a switched-off outlet~ gives zeros). Not throw~/catch~: Pd sorts a catch~ before the throw~s, which delayed the loop by one block. Pitch shifter: the two taps' delay and window are shared by L and R. Output is bit-identical to before, except clear: its fade is now really 20 ms (the old `[$1 60(` turned "0 20" into a 60 ms fade, cut off when the looper DSP stopped at 40 ms).
-  - Result (x86, % of one core, 8 voices): see the table in the PR / manual §13.
+  - Result (x86, % of one core above the 0.9 % idle FX, 8 voices, `t_cpu`-style best of 3): Feral 2.07 → 1.51, Halo 2.92 → 1.58, Lyra 1.31 → 1.04, Steel 1.89 → 1.79 (its block~ 16 string dominates), Under 1.00 → 0.93, Velvet 2.04 → 1.52, Volt 1.49 → 1.24. Audio looper: 1 layer 0.22 → 0.11, 3 layers 0.25 → 0.20, pitch-shifted 0.45 → 0.30, overdub 0.27 → 0.17.
 - **Measuring CPU offline:** child CPU time (`resource.getrusage`) of a 100 s run minus a 10 s run (cancels start-up and the 95 MB looper allocation); wall-clock timing is too noisy.
 - **`expr`:**
   - No `wrap()`; use `fmod(x + 4, 1)`.
@@ -108,7 +108,7 @@ This is the working memory for this project: read it first in any new session.
 - **Settings:** defaults are used only when `settings.txt` is missing. The harness resets settings before each test run, because auto-save writes into the patch folder.
 - **Knob pickup:** the continuous knobs move relative to their current value (the `REL_CUR` table in `sec_ui.py`). Selector knobs jump.
 - **Reverb:** 8-line Hadamard FDN with 4 input diffusers, modulated `delread4~` lines, two-band damping (bass decays 1.3× longer) and freeze.
-- **CPU** (offline x86 benchmark, 8 voices sounding): engines use 2.8-6.3 % of one core. The CM3 is roughly 8-10× slower.
+- **CPU** (offline x86 benchmark, 8 voices sounding): engines use 0.9-1.8 % of one core above the FX (see CPU round 2). The CM3 is roughly 8-10× slower.
 
 ## What we learned from reference patches (ideas only, not code)
 | Source | Idea | Status |
