@@ -7,39 +7,46 @@ from gen_engines import frame, mul, add, chain, ex, softclip, finish, r, Ctl
 from sec_core import to, msg_to
 
 
+def switched(e, nm, knob, cond, build, ins, x, y, gain=None):
+    """a subpatch that runs only while [r knob] -> [expr cond] is 1 (cond on $f1, the knob's 0..1 value). It gets the
+    signals ins on its inlet~s; build(s, inlets) returns its output. Switching on fades in over 10 ms, off fades out
+    and switches the DSP off 20 ms later. On switch-on [s $0-on-<nm>] fires (clear delay lines, reset filters)."""
+    global MODE
+    s = Canvas(nm, w=1000, h=700)
+    s.comment(f"{nm}: runs only while {cond}", 20, 5)
+    inl = [s.obj("inlet~", 20 + i * 110, 30) for i in range(len(ins))]
+    sw = s.obj("switch~", 850, 230)
+    g = s.obj("line~", 700, 230)
+    sel = chain(s, s.obj(f"r {knob}", 850, 30), [f"expr {cond}", "change -1", "sel 1 0"], 850, 55)
+    off = s.obj("delay 20", 950, 180)
+    on = to(s, sel, "t b b b", 850, 130)
+    s.c(msg_to(s, on, "stop", 950, 155, outlet=2), 0, off, 0)
+    s.c(msg_to(s, on, "1", 900, 180, outlet=1), 0, sw, 0)
+    s.c(msg_to(s, on, "1 10", 850, 180, outlet=0), 0, g, 0)
+    to(s, on, f"s $0-on-{nm}", 900, 205, outlet=1)        # (before DSP runs) a mode clears its old delay lines
+    ft = to(s, sel, "t b b", 950, 130, outlet=1)
+    s.c(msg_to(s, ft, "0 10", 1000, 155, outlet=1), 0, g, 0)
+    s.c(ft, 0, off, 0)
+    s.c(msg_to(s, off, "0", 950, 205), 0, sw, 0)
+    MODE = nm
+    out = build(s, inl)
+    if gain is not None:
+        out = chain(s, out, [f"*~ {gain:.4f}"], 20, 615)
+    s.c(mul(s, out, g, 20, 640), 0, s.obj("outlet~", 20, 670), 0)
+    box = e.sub(s, x, y)
+    for i, src in enumerate(ins):
+        e.c(src, 0, box, i)
+    return box
+
+
 def modes(e, knob, names, builders, ins, x, y, gains=None):
-    """one subpatch per mode, picked by the control-rate knob [r knob] (0..1 -> int(v * n)). Each gets the signals
-    ins on its inlet~s and returns an outlet~ signal; the outputs are summed. Selecting fades in over 10 ms;
-    deselecting fades out, then switches the DSP off 20 ms later. gains: per-mode level trims (loudness matching)."""
+    """one switched() subpatch per mode, picked by the control-rate knob [r knob] (0..1 -> int(v * n)); the outputs
+    are summed. gains: per-mode level trims (loudness matching)."""
     n = len(names)
     total = None
     for k, (nm, build) in enumerate(zip(names, builders)):
-        s = Canvas(nm, w=1000, h=700)
-        s.comment(f"{nm}: runs only while selected", 20, 5)
-        inl = [s.obj("inlet~", 20 + i * 110, 30) for i in range(len(ins))]
-        sw = s.obj("switch~", 850, 230)
-        g = s.obj("line~", 700, 230)
-        sel = chain(s, s.obj(f"r {knob}", 850, 30), [f"expr int(min(max($f1, 0), 0.999) * {n}) == {k}", "change -1",
-                                                     "sel 1 0"], 850, 55)
-        off = s.obj("delay 20", 950, 180)
-        on = to(s, sel, "t b b b", 850, 130)
-        s.c(msg_to(s, on, "stop", 950, 155, outlet=2), 0, off, 0)
-        s.c(msg_to(s, on, "1", 900, 180, outlet=1), 0, sw, 0)
-        s.c(msg_to(s, on, "1 10", 850, 180, outlet=0), 0, g, 0)
-        to(s, on, f"s $0-on-{nm}", 900, 205, outlet=1)        # (before DSP runs) a mode clears its old delay lines
-        ft = to(s, sel, "t b b", 950, 130, outlet=1)
-        s.c(msg_to(s, ft, "0 10", 1000, 155, outlet=1), 0, g, 0)
-        s.c(ft, 0, off, 0)
-        s.c(msg_to(s, off, "0", 950, 205), 0, sw, 0)
-        global MODE
-        MODE = nm
-        out = build(s, inl)
-        if gains:
-            out = chain(s, out, [f"*~ {gains[k]:.4f}"], 20, 615)
-        s.c(mul(s, out, g, 20, 640), 0, s.obj("outlet~", 20, 670), 0)
-        box = e.sub(s, x + k * 120, y)
-        for i, src in enumerate(ins):
-            e.c(src, 0, box, i)
+        box = switched(e, nm, knob, f"int(min(max($f1, 0), 0.999) * {n}) == {k}", build, ins, x + k * 120, y,
+                       gains[k] if gains else None)
         total = box if total is None else add(e, total, box, x + k * 120, y + 30)
     return total
 

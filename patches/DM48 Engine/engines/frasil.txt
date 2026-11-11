@@ -1,0 +1,2 @@
+Layers Souffle Motion Timbre;
+0 0.35 0.4 0.5;

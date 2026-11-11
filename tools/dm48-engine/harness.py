@@ -3,7 +3,8 @@ import os, sys, subprocess, shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pdgen import Canvas
 # the engines as they appear on the ENGINE knob (sorted file names); knob value that selects one
-ENGINE_NAMES = ["doom", "feral", "halo", "hybrid", "lyra", "steel", "under", "velvet", "volt"]
+from gen_engines import engine_names
+ENGINE_NAMES = engine_names()
 
 
 def eng_knob(name):

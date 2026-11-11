@@ -58,6 +58,7 @@ def frame(title):
     e.c(il, 0, env, 0)
     tb = e.obj("line~", 500, 55)
     e.c(it, 0, tb, 0)
+    e.ip = ip                                             # the raw pitch inlet ("note ms"; ms 0 = a new note)
     return e, pl, env, tb
 
 
@@ -622,9 +623,19 @@ ENGINES = {
 }
 
 
+def more_engines():
+    """the engines in other files: Hybrid and Doom (switchable modes), Frasil and Glint (after FRASIL)"""
+    import gen_hybrid, gen_frasil
+    return {**gen_hybrid.ENGINES, **gen_frasil.ENGINES}
+
+
+def engine_names():
+    """every bundled engine, sorted as on the ENGINE knob"""
+    return sorted(list(ENGINES) + list(more_engines()))
+
+
 def build(out_dir):
-    import gen_hybrid                                     # Hybrid and Doom (engines with switchable modes)
-    ENGINES.update(gen_hybrid.ENGINES)
+    ENGINES.update(more_engines())
     ed = os.path.join(out_dir, "engines")
     os.makedirs(os.path.join(ed, "lib"), exist_ok=True)
     bsaw(os.path.join(ed, "lib", "bsaw.pd"))

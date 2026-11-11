@@ -97,7 +97,7 @@
 #X obj 400 560 +~;
 #X obj 400 582 min~ 1;
 #N canvas 50 50 1000 700 rip 0;
-#X text 20 5 rip: runs only while selected;
+#X text 20 5 rip: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 0;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -209,7 +209,7 @@
 #X connect 50 0 51 0;
 #X restore 20 520 pd rip;
 #N canvas 50 50 1000 700 tear 0;
-#X text 20 5 tear: runs only while selected;
+#X text 20 5 tear: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 1;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -320,7 +320,7 @@
 #X restore 140 520 pd tear;
 #X obj 140 550 +~;
 #N canvas 50 50 1000 700 metal 0;
-#X text 20 5 metal: runs only while selected;
+#X text 20 5 metal: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 2;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -431,7 +431,7 @@
 #X restore 260 520 pd metal;
 #X obj 260 550 +~;
 #N canvas 50 50 1000 700 flesh 0;
-#X text 20 5 flesh: runs only while selected;
+#X text 20 5 flesh: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 3;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;

@@ -34,7 +34,7 @@
 #X obj 20 80 r~ eng-vib;
 #X obj 150 80 r~ eng-sawk;
 #N canvas 50 50 1000 700 src-phase 0;
-#X text 20 5 src-phase: runs only while selected;
+#X text 20 5 src-phase: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 0;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -184,7 +184,7 @@
 #X connect 66 0 67 0;
 #X restore 20 200 pd src-phase;
 #N canvas 50 50 1000 700 src-vowel 0;
-#X text 20 5 src-vowel: runs only while selected;
+#X text 20 5 src-vowel: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 1;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -422,7 +422,7 @@
 #X restore 140 200 pd src-vowel;
 #X obj 140 230 +~;
 #N canvas 50 50 1000 700 src-pulse 0;
-#X text 20 5 src-pulse: runs only while selected;
+#X text 20 5 src-pulse: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 2;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -518,7 +518,7 @@
 #X restore 260 200 pd src-pulse;
 #X obj 260 230 +~;
 #N canvas 50 50 1000 700 src-breath 0;
-#X text 20 5 src-breath: runs only while selected;
+#X text 20 5 src-breath: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 3;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -604,7 +604,7 @@
 #X restore 380 200 pd src-breath;
 #X obj 380 230 +~;
 #N canvas 50 50 1000 700 body-filter 0;
-#X text 20 5 body-filter: runs only while selected;
+#X text 20 5 body-filter: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 0;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -672,7 +672,7 @@
 #X connect 30 0 31 0;
 #X restore 20 300 pd body-filter;
 #N canvas 50 50 1000 700 body-modal 0;
-#X text 20 5 body-modal: runs only while selected;
+#X text 20 5 body-modal: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 1;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -798,7 +798,7 @@
 #X restore 140 300 pd body-modal;
 #X obj 140 330 +~;
 #N canvas 50 50 1000 700 body-strings 0;
-#X text 20 5 body-strings: runs only while selected;
+#X text 20 5 body-strings: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 2;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
@@ -968,7 +968,7 @@
 #X restore 260 300 pd body-strings;
 #X obj 260 330 +~;
 #N canvas 50 50 1000 700 body-tube 0;
-#X text 20 5 body-tube: runs only while selected;
+#X text 20 5 body-tube: runs only while int(min(max(\$f1 \, 0) \, 0.999) * 4) == 3;
 #X obj 20 30 inlet~;
 #X obj 130 30 inlet~;
 #X obj 240 30 inlet~;
