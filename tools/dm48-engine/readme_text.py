@@ -57,7 +57,7 @@ ENGINES (engines/ folder; add your own - see engines/README.txt)
  doom   drone + dirt chain Chain Mod Dirt Tone
         Chain: Rip Tear Metal Flesh (knob quarters); breath pushes clean -> dirty
  frasil ambient drone       Layers Souffle Motion Timbre   (after FRASIL by Styves Goupil)
- glint  breath-played FM    Ratio Bright Bloom Ping         (after FRASIL's GLINT)
+ glint  FM bells            Ratio Bright Decay Ring         (after FRASIL's GLINT; breath = louder, longer)
  metal  sung metal bodies   Body Bloom Shimmer Tone         (after Jaffedrone; Body: 8 bodies in eighths)
  string bowed string        Bright Buzz Stiff Sustain       (after Jaffedrone; jawari buzz)
  wind   reeds               Reed Bright Air Vibrato         (after Jaffedrone; Reed: single, double, free)

@@ -70,15 +70,15 @@ def frasil_choir(s, ins):
             cs.c(ctl_float(cs, "$1-p3", f"1 + {side} * (8 + 14 * $f1) * 0.0005778", 20 + k * 90, 100), 0, o, 1)
         cf.append(c.f(mul(cs, o, fi, 20 + k * 90, 280)))
     ce = cs.obj("+~ 0.5", 500, 300)
-    cs.c(add(cs, tide_sig(cs, 400, 200), chain(cs, prsi, ["*~ 0.9"], 600, 250), 500, 275), 0, ce, 0)
-    cs.c(ctl_float(cs, "$1-p4", "$f1 * 0.5 + ($f1 - 0.5) * 0.4 - 0.05", 500, 150), 0, ce, 1)
+    cs.c(add(cs, tide_sig(cs, 400, 200), chain(cs, prsi, ["*~ 0.5"], 600, 250), 500, 275), 0, ce, 0)
+    cs.c(ctl_float(cs, "$1-p4", "$f1 * 0.8 + ($f1 - 0.5) * 0.6", 500, 150), 0, ce, 1)   # (FRASIL's weights)
     a = c.o(onepole(cs, fi, ce, 1, 39, 500, 330))
     sw = [s.obj("lib/bsaw", 20 + k * 150, 120) for k in range(3)]
     for k in range(3):
         s.c(cf[k], 0, sw[k], 0)
         s.c(nn, 0, sw[k], 1)
     sm = add(s, add(s, sw[0], sw[1], 20, 160), sw[2], 20, 185)
-    return onepole_run(s, sm, a, 0.57, stages=2)
+    return onepole_run(s, sm, a, 0.57)                                # (FRASIL's one-pole)
 
 
 def onepole_run(s, x, a, gain, stages=1):
@@ -94,8 +94,8 @@ def onepole_run(s, x, a, gain, stages=1):
 
 def frasil_partials(s, ins):
     """PARTIELS: NP sines at the harmonics. Timbre tilts their levels (bright .. dark), levelled to the same
-    loudness (FRASIL: 0.6 / sqrt(sum a^2)) - a message, knob values only; each level wanders with Motion; breath
-    (and MPE timbre) bring the upper ones in: soft breath is near the fundamental, hard breath the full set"""
+    loudness (FRASIL: 0.6 / sqrt(sum a^2)) - a message, knob values only; each level wanders with Motion; pressure
+    (breath, and MPE timbre) tilts them brighter, as FRASIL's does (its tilt moves by 0.45 x pressure)"""
     f, prs = ins
     c = Ctl(s, 600, 30)
     cs = c.s
@@ -191,18 +191,27 @@ RATIOS = (0.5, 1, 1.414, 2, 2.756, 3, 3.5, 4, 5, 7, 9, 11, 13.6)
 
 
 def glint(path):
-    e, pl, env, tb = frame("Glint - icy FM bells after FRASIL's GLINT (Styves Goupil), played by breath: a modulator at "
-                           "Ratio into a carrier. Breath sets the level and opens the FM index - the harder you blow, "
-                           "the more sidebands (Bloom: how much). MPE timbre (CC 74) brightens each note. Ping adds a "
-                           "struck accent at the start of a note (0: none, pure breath). A vibrato fades in as a note "
-                           "settles. Knobs: Ratio, Bright, Bloom, Ping")
-    p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in enumerate(("$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
-    eb = mul(e, env, bamt, 650, 80)
-    # a new note (a pitch message with time 0) starts the ping: up in 4 ms, down over 600 ms, cubed (exponential-ish)
+    e, pl, env, tb = frame("Glint - icy FM bells after FRASIL's GLINT (Styves Goupil): a modulator at Ratio into a "
+                           "carrier, bright at the strike and mellower as it rings (a ping, then a softer ring). As on "
+                           "FRASIL, pressure (breath) makes it louder (up to 1 + 1.5 x) and holds the ring longer while "
+                           "you keep blowing; a vibrato fades in after the strike. Knobs: Ratio, Bright, Decay, Ring "
+                           "(the level it settles at while held: 0 a bell, up a lead)")
+    p2, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in enumerate(("$1-p2~", "$1-p4~", "eng-bamt~")))
+    prs = mul(e, env, bamt, 650, 80)                      # FRASIL's pressure
+    # the strike: a pitch message with time 0 (a new note) fires two pings, the level's and the index's
     st = chain(e, e.ip, ["unpack 0 0"], 150, 30)
-    ping = to(e, msg_to(e, to(e, st, "sel 0", 150, 80, outlet=1), "0, 1 4, 0 600 4", 150, 185), "vline~", 150, 210)
-    p3c = mul(e, mul(e, ping, ping, 150, 240), ping, 150, 265)
-    # pitch, the vibrato (5.2 Hz, up to 12 cents, fading in as the ping dies) and the modulator at Ratio
+    hit = chain(e, to(e, st, "sel 0", 150, 80, outlet=1), ["t b b"], 150, 105)
+    dk = chain(e, e.obj("r $1-p3", 350, 105), ["expr 80 * pow(75, $f1)", "t f f"], 350, 130)   # 80 ms .. 6 s
+    pa = e.obj("f 1000", 150, 160)
+    e.c(dk, 1, pa, 1)
+    e.c(hit, 1, pa, 0)
+    ping = to(e, msg_to(e, pa, "0, 1 4, 0 $1 4", 150, 185), "vline~", 150, 210)
+    pi_ = e.obj("f 300", 300, 160)
+    e.c(to(e, dk, "expr 30 + $f1 * 0.2", 450, 155, outlet=0), 0, pi_, 1)
+    e.c(hit, 0, pi_, 0)
+    pingi = to(e, msg_to(e, pi_, "0, 1 2, 0 $1 2", 300, 185), "vline~", 300, 210)
+    pa3 = mul(e, mul(e, ping, ping, 150, 240), ping, 150, 265)            # cubed: an exponential-like fall
+    pi3 = mul(e, mul(e, pingi, pingi, 300, 240), pingi, 300, 265)
     c = Ctl(e, 500, 300)
     cs = c.s
     vib = mul(cs, cs.obj("osc~ 5.2", 400, 80), c.ex("(1 - $v1) * 0.12", [c.i(ping)]), 400, 110)
@@ -217,20 +226,24 @@ def glint(path):
     cs.c(fi, 0, fm, 0)
     cs.c(rv, 0, fm, 1)
     f, fmo = c.f(fi), c.f(fm)
-    # the FM index (radians -> turns: / 2 pi): Bright sets its range; breath opens it, squared so soft breath stays
-    # nearly pure and hard breath bites (Bloom: how far); MPE timbre adds; the ping brightens the start
-    idx = ex(e, "(0.1 + $v1 * $v1 * 4) * (0.3 + $v2 * $v2 * (0.4 + $v3 * 3) + max(0, $v4 - 0.5) * 1.5) * "
-                "(1 + $v5 * 2 * $v6) * 0.15915", [p2, eb, p3, tb, p4, p3c], 20, 380)
+    # the index (FRASIL): Bright^2 x 5 at the strike, down to half as it rings (radians -> turns: / 2 pi);
+    # MPE timbre adds a little
+    idx = ex(e, "$v1 * $v1 * 5 * (0.5 + 0.5 * $v2) * (1 + max(0, $v3 - 0.5)) * 0.15915", [p2, pi3, tb], 20, 380)
     mod = mul(e, chain(e, fmo, ["phasor~", "cos~"], 300, 400), idx, 300, 450)
     car = chain(e, add(e, chain(e, f, ["phasor~"], 20, 420), mod, 20, 470), ["cos~"], 20, 495)
-    # the level is the breath (finish); Ping adds an accent on top at the start of a note
-    amp = ex(e, "1 + $v1 * $v2 * 1.5", [p4, p3c], 150, 520)
+    # the level: the strike decays to Ring's level; pressure holds more of it (the ring dies slower while you blow)
+    # and makes it louder (FRASIL: gain 1 + 1.5 pressure)
+    amp = ex(e, "($v1 + (1 - $v1) * min(1, $v3) * 0.5 + (1 - $v1) * (1 - min(1, $v3) * 0.5) * $v2) * (1 + 1.5 * $v3)",
+             [p4, pa3, prs], 150, 520)
     body = mul(e, chain(e, f, ["*~ 0.5", "osc~"], 400, 520), r(e, "eng-body~", 500, 520), 400, 560)
-    finish(e, mul(e, add(e, car, chain(e, body, ["*~ 0.5"], 400, 580), 20, 600), amp, 20, 620), env, 0.42, 20, 640,
-           path)
+    # a note sounds while held (the breath gate opens at any breath) and rings out over the host's release
+    gate = chain(e, env, ["*~ 20", "clip~ 0 1"], 300, 600)
+    out = mul(e, mul(e, add(e, car, chain(e, body, ["*~ 0.5"], 400, 580), 20, 600), amp, 20, 620), gate, 20, 640)
+    e.c(chain(e, out, ["*~ 0.38"], 20, 670), 0, e.obj("outlet~", 20, 700), 0)
+    e.save(path)
 
 
 ENGINES = {
     "frasil": (frasil, "Layers Souffle Motion Timbre", "0 0.35 0.4 0.5"),
-    "glint": (glint, "Ratio Bright Bloom Ping", f"{5.5 / len(RATIOS):.3f} 0.45 0.5 0"),
+    "glint": (glint, "Ratio Bright Decay Ring", f"{5.5 / len(RATIOS):.3f} 0.45 0.55 0.3"),
 }
