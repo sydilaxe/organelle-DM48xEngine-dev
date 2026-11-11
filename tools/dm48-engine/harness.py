@@ -41,9 +41,21 @@ def run(patchdir, events, wav="h.wav", extra_prints=()):
     for n in list(PRINTS) + list(extra_prints):
         r = c.obj("r " + n); p = c.obj("print " + n); c.c(r, 0, p, 0)
     c.save(os.path.join(d, "h_test.pd"))
-    res = subprocess.run(["pd", "-nosound", "-nomidi", "-batch", "-stderr", "-open", "h_test.pd"], cwd=d,
-                         capture_output=True, text=True, timeout=120)
-    return res.stderr
+    # Pd 0.54 very rarely dies right after start-up in CI (an empty recording, seen once in hundreds of runs,
+    # never reproduced). Say so in the log, with Pd's exit code and last output, and run it once more.
+    for attempt in (1, 2):
+        if os.path.exists(os.path.join(d, wav)):
+            os.remove(os.path.join(d, wav))          # so an old recording can't pass for this one
+        res = subprocess.run(["pd", "-nosound", "-nomidi", "-batch", "-stderr", "-open", "h_test.pd"], cwd=d,
+                             capture_output=True, text=True, timeout=120)
+        try:
+            ok = res.returncode == 0 and b"data" in open(os.path.join(d, wav), "rb").read(4096)
+        except OSError:
+            ok = False
+        if ok or attempt == 2:
+            return res.stderr
+        print(f"WARN  Pd exited with code {res.returncode} and no recording; running it again. "
+              f"Last output: {res.stderr[-400:]!r}", file=sys.stderr, flush=True)
 
 def audio(patchdir, wav="h.wav"):
     import numpy as np
