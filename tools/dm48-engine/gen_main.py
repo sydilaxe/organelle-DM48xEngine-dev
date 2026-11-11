@@ -5,7 +5,7 @@ from gen_voice import BEND, JUST
 from sec_core import NCH, midi_in, keys, combos, process, monitor, chain, to, msg_to
 from sec_looper import looper
 from sec_ui import ui, settings
-from sec_rest import engine_manager, library, audio, glue, MAXBYTES, MAXEV
+from sec_rest import engine_manager, library, audio, glue, overload, MAXBYTES, MAXEV
 from sec_midiout import midi_out, clock
 from sec_arp import arp
 from sec_oled import oled, rows, scope
@@ -43,7 +43,7 @@ def build(out_dir):
         m.obj(f"value {nm}", 950 + (i // 18) * 150, 90 + (i % 18) * 22)
     y = 80
     for c in (midi_in(), keys(), combos(), process(), monitor(), looper(), ui(), settings(), engine_manager(),
-              library(), audio(), glue(), midi_out(), clock(), arp(), oled(), rows(), sec_aloop.aloop(), scope()):
+              library(), audio(), glue(), overload(), midi_out(), clock(), arp(), oled(), rows(), sec_aloop.aloop(), scope()):
         m.sub(c, 20, y)
         y += 25
     # ---- start-up, in order (right outlet first)
