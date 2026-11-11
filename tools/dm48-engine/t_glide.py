@@ -5,11 +5,15 @@ SR = 44100
 
 
 def setup(mode, glide, when, frm):
-    """Halo engine, then VOICE page: knob1 mode, knob2 glide (relative knob: 0 first), knob3 when, knob4 from."""
+    """Halo engine, then VOICE page: knob1 mode, knob2 glide (relative knob: 0 first), knob3 when, knob4 from;
+    then delay and reverb off."""
     return [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {eng_knob('halo')}"),
             (400, "notesRaw 66 100"), (450, "notesRaw 66 0"),
             (500, f"knob1 {0.9 if mode else 0.1}"), (520, "knob2 0"), (540, f"knob2 {glide}"),
-            (560, f"knob3 {0.9 if when else 0.1}"), (580, f"knob4 {0.9 if frm else 0.1}")]
+            (560, f"knob3 {0.9 if when else 0.1}"), (580, f"knob4 {0.9 if frm else 0.1}"),
+            # FX page: delay and reverb off - their tails hold the previous pitch and can fool the pitch tracker
+            (600, "notesRaw 64 100"), (650, "notesRaw 64 0"), (700, "knob3 1"), (710, "knob3 0"),
+            (720, "knob4 1"), (730, "knob4 0")]
 
 
 def note(ev, t, ch, n, dur):

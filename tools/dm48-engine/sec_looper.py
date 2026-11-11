@@ -10,7 +10,7 @@ backwards and note-ons / note-offs swap roles.
 States (englstate): 0 empty, 1 REC, 2 PLAY, 3 DUB, 4 STOP.
 """
 from pdgen import Canvas
-from sec_core import NCH, chain, to, msg_to, setv, tabwrite_pair
+from sec_core import track_on, NCH, chain, to, msg_to, setv, tabwrite_pair
 
 # forward: wrap into [0, len); reverse: wrap into (0, len] so a reverse cycle starts at the end, not at 0
 CUR = ("expr if(engllen > 0, if(englspd > 0, (englanc + englspd * englpos) - engllen * "
@@ -62,7 +62,7 @@ def looper():
     # ---- recorder
     rrt = chain(lp, lp.obj("r eng-rec", 20, 40), ["t a a"], 20, 65)
     rn = to(lp, rrt, "route 0", 250, 90, outlet=1)
-    tabwrite_pair(lp, "if($f1 < 17, $f1 * 128 + $f2, 0); $f3 > 0", "englive", 250, 115, rn)
+    track_on(lp, rn, "if($f1 < 17, $f1 * 128 + $f2, -1); $f3 > 0", "englivet", 250, 115)
     rg = to(lp, rrt, "t a b", 20, 100)
     rsp = lp.obj("spigot", 20, 150)
     lp.c(to(lp, rg, "expr (englstate == 1) || (englstate == 3)", 100, 125, outlet=1), 0, rsp, 1)
@@ -84,30 +84,43 @@ def looper():
     to(lp, clu, "v englclay", 120, 450, outlet=1)
     clt = to(lp, clu, "t b f", 20, 450)
     to(lp, clt, "v englcpos", 120, 475, outlet=1)
+    # visit the live notes that are on (one line each in englivet)
     clc = lp.obj("f", 20, 550)
     lp.c(msg_to(lp, clt, "0", 20, 475), 0, clc, 1)
-    un = to(lp, msg_to(lp, clt, str(17 * 128), 60, 500), "until", 60, 525)
+    un = chain(lp, msg_to(lp, clt, "bang", 60, 500), ["text size englivet", "until"], 60, 525)
     lp.c(un, 0, clc, 0)
     lp.c(to(lp, clc, "+ 1", 60, 575), 0, clc, 1)
-    clmo = chain(lp, clc, ["expr if(englive[$f1] > 0, $f1, -1)", "moses 0"], 20, 600)
-    clx = to(lp, clmo, "expr englcpos; englclay; 0; int($f1 / 128); $f1 % 128; 0", 60, 650, outlet=1)
+    clmo = chain(lp, clc, ["text get englivet 0 1"], 20, 600)
+    clx = to(lp, clmo, "expr englcpos; englclay; 0; int($f1 / 128); $f1 % 128; 0", 60, 650, outlet=0)
     clp = lp.obj("pack 0 0 0 0 0 0", 60, 675)
     for k in range(5, -1, -1):
         lp.c(clx, k, clp, k)
     lp.c(clp, 0, tins, 0)
 
     # ---- note-offs for sounding loop notes: [s $0-loopoff] "firstch lastch"
-    lox = chain(lp, lp.obj("r $0-loopoff", 450, 400), ["expr $f1 * 128; ($f2 + 1 - $f1) * 128"], 450, 425)
-    locnt = lp.obj("f", 550, 475)
-    lp.c(lox, 1, locnt, 1)
+    # visit the loop notes that are on (englheldt), last line first: a note-off deletes its own line
+    lox = chain(lp, lp.obj("r $0-loopoff", 450, 400), ["expr $f1 * 128; ($f2 + 1) * 128"], 450, 425)
+    lohi = lp.obj("f", 600, 475)
+    lp.c(lox, 1, lohi, 1)
     lot = to(lp, lox, "t b f", 450, 450)
+    lolo = lp.obj("f", 550, 475)
+    lp.c(lot, 1, lolo, 1)
     loc = lp.obj("f", 450, 525)
-    lp.c(lot, 1, loc, 1)
-    lp.c(lot, 0, locnt, 0)
-    lp.c(to(lp, locnt, "until", 550, 500), 0, loc, 0)
-    lp.c(to(lp, loc, "+ 1", 500, 550), 0, loc, 1)
-    lom = chain(lp, loc, ["expr if(englheld[$f1] > 0, $f1, -1)", "moses 0"], 450, 575)
-    lox2 = to(lp, lom, "expr int($f1 / 128); $f1 % 128", 490, 625, outlet=1)
+    lsz = chain(lp, lot, ["text size englheldt", "t f f"], 450, 475)
+    lp.c(lsz, 1, loc, 1)
+    lp.c(to(lp, lsz, "until", 500, 500), 0, loc, 0)
+    ldn = to(lp, loc, "- 1", 500, 550)
+    lp.c(ldn, 0, loc, 1)
+    lkey = chain(lp, ldn, ["text get englheldt 0 1", "t f f"], 450, 575)
+    lsp = lp.obj("spigot", 450, 600)
+    lin = lp.obj("expr ($f1 >= $f2) && ($f1 < $f3)", 520, 600)
+    lp.c(lkey, 1, lin, 0)
+    lp.c(lolo, 0, lin, 1)
+    lp.c(lohi, 0, lin, 2)
+    lp.c(lin, 0, lsp, 1)
+    lp.c(lkey, 0, lsp, 0)
+    lom = lsp
+    lox2 = to(lp, lom, "expr int($f1 / 128); $f1 % 128", 490, 625, outlet=0)
     lopk = lp.obj("pack 0 0", 490, 650)
     lp.c(lox2, 1, lopk, 1)
     lp.c(lox2, 0, lopk, 0)

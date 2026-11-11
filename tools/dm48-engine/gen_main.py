@@ -31,7 +31,7 @@ def build(out_dir):
     scl = m.msg("; engscales 0 " + " ".join(str(round(v, 4)) for v in SCALE_TABLE)
                 + "; engfamstart 0 " + " ".join(map(str, FAM_START)) + "; engfamcount 0 " + " ".join(map(str, FAM_COUNT))
                 + "; engfamof 0 " + " ".join(map(str, FAM_OF)), 700, 40)
-    for nm in ("englp", "engfiles", "engdirs", "engmono", "englist", "engparams", "engdesc", "engarp", "engscalenames"):
+    for nm in ("englp", "engfiles", "engdirs", "engmono", "englist", "engparams", "engdesc", "engarp", "engscalenames", "englheldt", "englivet"):
         m.obj(f"text define {nm}", 700, y)
         y += 22
     y = 90

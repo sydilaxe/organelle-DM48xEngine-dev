@@ -475,10 +475,12 @@ def audio():
     a = rsub
     rin = a.obj("inlet~", 20, 700)
     fx_switch(a, ("eng-rmix", "eng-freeze"), "(engfxrmix > 0.001) || (engfxfreeze > 0.5)", 1600, 30)
-    # 8-line feedback delay network (after VerbRack): input diffusion -> 8 modulated delays mixed by a
-    # Hadamard matrix; each line loses treble faster than bass (lows ring 1.3x longer). Size = decay time.
+    # 8-line feedback delay network (after VerbRack): input diffusion -> 8 delays mixed by a Hadamard matrix,
+    # each line damped by a low-pass. Size = decay time. Kept light for the Organelle (about half the objects of the
+    # first version): 2 diffusers, 2 modulated lines, one damping filter a line, control-rate loop gains that
+    # also carry the Hadamard's 1/sqrt(8).
     LENS = [37.3, 43.1, 49.7, 56.9, 63.7, 71.3, 79.1, 87.7]
-    for i, (ms, g) in enumerate(((4.77, 0.6), (3.59, 0.6), (12.73, 0.55), (9.31, 0.55))):
+    for i, (ms, g) in enumerate(((4.77, 0.6), (12.73, 0.55))):
         rin = allpass(a, 1300, 400 + i * 150, rin, f"$0-rd{i}", ms, g)
     # loop gains at control rate: T60 = 1.2 .. 15 s from Size; freeze = hold (no loss, no input)
     gsrc = a.obj("expr engrsize; engfreeze", 1600, 300)
@@ -487,32 +489,27 @@ def audio():
         to(a, tv, f"v {nm}", x + 40, 300, outlet=1)
         a.c(tv, 0, gsrc, 0)
     T60 = "(1.2 + engrsize * engrsize * 14)"
-    gx = []
-    for i, L in enumerate(LENS):
-        gx.append(f"if(engfreeze > 0.5, 0.9998, exp(-6.9078 * {L} / 1000 / {T60}))")
-        gx.append(f"if(engfreeze > 0.5, 0.9998, exp(-6.9078 * {L} / 1000 / ({T60} * 1.3)))")
+    # (x 1.15: with one damping band the lows no longer ring longer; this keeps the tail about as long as before)
+    gx = [f"0.35355 * if(engfreeze > 0.5, 0.9998, exp(-6.9078 * {L} / 1000 / ({T60} * 1.15)))" for L in LENS]
     ge = a.obj("expr " + "; ".join(gx), 1600, 330)
     a.c(gsrc, 0, ge, 0)
-    gl = []
-    for j in range(16):
-        gl.append(to(a, msg_to(a, ge, "$1 80", 1600 + j * 45, 360, outlet=j), "line~", 1600 + j * 45, 385))
-    lfo = to(a, a.obj("r eng-rmod", 1300, 1000), "phasor~ 0.31", 1300, 1025)
+    a.c(a.obj("loadbang", 1500, 300), 0, gsrc, 0)
+    lfo = to(a, to(a, a.obj("r eng-rmod", 1300, 1000), "osc~ 0.31", 1300, 1025), "*~ 0.35", 1300, 1050)
     ins = []
     for i, L in enumerate(LENS):
         x = 20 + i * 210
-        ph = to(a, lfo, f"+~ {i / 8}", x + 100, 1060)
-        md = to(a, to(a, ph, "cos~", x + 100, 1085), f"*~ {0.35 if i % 2 == 0 else -0.35}", x + 100, 1110)
-        tm = to(a, md, f"+~ {L}", x + 100, 1135)
-        rd = a.obj(f"delread4~ $0-fdn{i}", x, 1160)
-        a.c(tm, 0, rd, 0)
-        hi = to(a, rd, "lop~ 5500", x, 1185)
-        lo = to(a, rd, "lop~ 250", x + 70, 1185)
-        # hi * g_hi + lo * (g_lo - g_hi)
-        gd = a.obj("-~", x + 140, 1210)
-        a.c(gl[2 * i + 1], 0, gd, 0)
-        a.c(gl[2 * i], 0, gd, 1)
-        dmp = add(a, mul(a, hi, gl[2 * i], x, 1210), mul(a, lo, gd, x + 70, 1235), x, 1260)
-        ins.append(dmp)
+        if i in (0, 5):                                # two lines wobble (in opposite directions)
+            tm = to(a, lfo, f"+~ {L}" if i == 0 else f"*~ -1", x + 100, 1110)
+            if i == 5:
+                tm = to(a, tm, f"+~ {L}", x + 100, 1135)
+            rd = a.obj(f"delread4~ $0-fdn{i}", x, 1160)
+            a.c(tm, 0, rd, 0)
+        else:
+            rd = a.obj(f"delread~ $0-fdn{i} {L}", x, 1160)
+        gm = a.obj("*~ 0", x, 1210)
+        a.c(to(a, rd, "lop~ 5500", x, 1185), 0, gm, 0)
+        a.c(ge, i, gm, 1)
+        ins.append(gm)
     # Hadamard 8x8 in three butterfly stages
     v = [(n, 0) for n in ins]
     for stage, step in enumerate((1, 2, 4)):
@@ -525,8 +522,6 @@ def audio():
             for o in (sm_, df_):
                 a.c(v[i][0], v[i][1], o, 0)
                 a.c(v[i + step][0], v[i + step][1], o, 1)
-            if step == 4:
-                sm_, df_ = to(a, sm_, "*~ 0.35355", xx, yy + 25), to(a, df_, "*~ 0.35355", xx + 60, yy + 25)
             nv[i], nv[i + step] = (sm_, 0), (df_, 0)
         v = nv
     outsL, outsR = [], []
@@ -537,14 +532,14 @@ def audio():
         a.c(v[i][0], v[i][1], w, 0)
         a.c(rp if i % 2 == 0 else rn, 0, w, 1)
         to(a, w, f"delwrite~ $0-fdn{i} 300", x, 1505)
-    def sum4(q, x):                                   # (q0 - q1 + q2 - q3) * 0.85
+    def sum4(q, x):                                   # (q0 - q1 + q2 - q3) * 0.85 (taps carry 1/sqrt(8))
         d1 = a.obj("-~", x, 1540)
         a.c(q[0], 0, d1, 0)
         a.c(q[1], 0, d1, 1)
         d2 = a.obj("-~", x + 60, 1540)
         a.c(q[2], 0, d2, 0)
         a.c(q[3], 0, d2, 1)
-        return to(a, add(a, d1, d2, x, 1565), "*~ 0.85", x, 1590)
+        return to(a, add(a, d1, d2, x, 1565), "*~ 2.4042", x, 1590)
     lsum = sum4([ins[0], ins[2], ins[4], ins[6]], 20)
     rsum = sum4([ins[1], ins[3], ins[5], ins[7]], 400)
     apL, apR = lsum, rsum

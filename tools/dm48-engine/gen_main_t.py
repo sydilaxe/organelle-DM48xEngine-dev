@@ -19,7 +19,7 @@ def build(out_dir):
                      ("dmxb", MAXBYTES), ("dmxt", MAXEV), ("dmxs", MAXEV), ("dmx1", MAXEV), ("dmx2", MAXEV)):
         m.obj(f"array define {nm} {size}", 700, y)
         y += 22
-    for nm in ("englp", "engfiles", "englist", "engparams", "engdesc"):
+    for nm in ("englp", "engfiles", "englist", "engparams", "engdesc", "englheldt", "englivet"):
         m.obj(f"text define {nm}", 700, y)
         y += 22
     y = 90

@@ -51,6 +51,24 @@ def tabwrite_pair(c, expr_text, table, x, y, src, outlet=0):
     return ex
 
 
+def track_on(c, src, expr_text, text, x, y, outlet=0):
+    """Keep [text text] = the keys that are on, one per line. [expr key; on] (key < 0 = ignore).
+    Stop / clear / close then only visit the notes that sound instead of scanning every key."""
+    ex = to(c, src, f"expr {expr_text}", x, y, outlet)
+    pk = c.obj("pack 0 0", x, y + 50)
+    c.c(ex, 1, pk, 1)
+    c.c(to(c, ex, "moses 0", x, y + 25), 1, pk, 0)
+    rt = to(c, msg_to(c, pk, "$2 $1", x, y + 75), "route 1 0", x, y + 100)
+    ont = to(c, rt, "t f f", x, y + 125)
+    ins = c.obj("spigot", x, y + 175)
+    c.c(chain(c, ont, [f"text search {text} 0", "< 0"], x + 60, y + 150, outlet=1), 0, ins, 1)
+    c.c(ont, 0, ins, 0)
+    to(c, ins, f"text insert {text} 1e+06", x, y + 200)
+    off = chain(c, rt, [f"text search {text} 0", "moses 0"], x + 150, y + 125, outlet=1)
+    to(c, off, f"text delete {text}", x + 150, y + 175, outlet=1)
+    return ex
+
+
 def midi_in():
     mi = Canvas("midi-in", w=1000, h=450)
     mi.comment("All MIDI becomes 'kind ch a b': 0 note (note vel), 1 bend (value), 2 pressure, 3 poly pressure (value note), 4 CC (cc value)", 20, 5)
@@ -280,7 +298,7 @@ def process():
     rt = chain(pr, pr.obj("r eng-proc", 20, 110), ["route 0 1 2 3 4"], 20, 135)
     # ---- notes: remember which loop notes sound, then allocate a voice
     nt = to(pr, rt, "t a a", 20, 170)
-    tabwrite_pair(pr, "if($f1 >= 17, $f1 * 128 + $f2, 0); $f3 > 0", "englheld", 150, 200, nt, outlet=1)
+    track_on(pr, nt, "if($f1 >= 17, $f1 * 128 + $f2, -1); $f3 > 0", "englheldt", 150, 200, outlet=1)
     # one voice per key, always: a repeated note-on first releases the key's voice, and a note-off for a key
     # that isn't sounding is dropped (otherwise [poly] can leave a voice stuck, e.g. after clearing the looper)
     kv = to(pr, nt, "expr $f1 * 128 + $f2; $f3", 20, 230)
