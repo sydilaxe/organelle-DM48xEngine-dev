@@ -1,6 +1,7 @@
 """OLED status strip (top 8 pixel rows, above the 5 text lines), redrawn ~12 times a second:
    [7 page tabs]  [loop bar: progress / blinking while recording]  [arp dot]  [breath meter]"""
 from pdgen import Canvas
+from sec_ui import PAGES
 from sec_core import chain, to, msg_to, setv
 
 OSC = "s oscOut"
@@ -18,9 +19,9 @@ def oled():
     o.c(msg_to(o, fr, "/oled/gFillArea 3 0 0 128 8 0", 600, 160, outlet=5), 0, out, 0)
     # 4: page tabs (outline each, fill the current one)
     tabs = to(o, fr, "t b b", 450, 160, outlet=4)
-    for i in range(8):
-        o.c(msg_to(o, tabs, f"/oled/gBox 3 {i * 5} 1 4 5 1", 450 + i * 20, 185 + (i % 2) * 20, outlet=1), 0, out, 0)
-    o.c(msg_to(o, to(o, tabs, "expr engpage * 5", 450, 230), "/oled/gFillArea 3 $1 1 4 5 1", 450, 255), 0, out, 0)
+    for i in range(len(PAGES)):           # 4 px a page: fits left of the loop bar (x 46)
+        o.c(msg_to(o, tabs, f"/oled/gBox 3 {i * 4} 1 3 5 1", 450 + i * 20, 185 + (i % 2) * 20, outlet=1), 0, out, 0)
+    o.c(msg_to(o, to(o, tabs, "expr engpage * 4", 450, 230), "/oled/gFillArea 3 $1 1 3 5 1", 450, 255), 0, out, 0)
     # 3: loop bar 46..93
     lpb = to(o, fr, "t b b b", 200, 300, outlet=3)
     to(o, lpb, "s $0-cur", 300, 325, outlet=2)

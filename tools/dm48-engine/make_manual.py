@@ -19,7 +19,7 @@ def shot(name, cap, w=256):
 # ---------------------------------------------------------------- Organelle M (grey), stylised
 WHITE = ["C", "D", "E", "F", "G", "A", "B"]
 LOW = {"C": "PLAY", "C#": "LIBRARY", "D": "SHAPE", "D#": "PANIC", "E": "FX", "F": "SETUP", "G": "TUNE",
-       "A": "ENGINE", "A#": "UNDO", "B": "LOOP ▶■", "F#": "VOICE", "G#": ""}
+       "A": "ENGINE", "A#": "UNDO", "B": "LOOP ▶■", "F#": "VOICE", "G#": "ARP"}
 HIGH = {"C": "FREEZE", "C#": "THROW", "D": "OCT −", "D#": "OCT +", "E": "WET", "F": "TAP", "F#": "ARP",
         "G": "PERM", "G#": "", "A": "", "A#": "", "B": ""}
 
@@ -213,7 +213,7 @@ the high octave holds performance effects.</p>
 <tr><td>F</td><td>SETUP page</td><td><b>Tap tempo</b> — two taps less than 2 s apart</td></tr>
 <tr><td>F♯</td><td>VOICE page</td><td><b>Arpeggiator</b> on/off</td></tr>
 <tr><td>G</td><td>TUNE page</td><td>Arp <b>permutations</b> on/off</td></tr>
-<tr><td>G♯</td><td>—</td><td>Screen <b>view</b>: pages › scope › audio loop waveform</td></tr>
+<tr><td>G♯</td><td>ARP page (again: ARP-BR)</td><td>Screen <b>view</b>: pages › scope › audio loop waveform</td></tr>
 <tr><td>A</td><td>ENGINE page</td><td><b>Audio loop</b>: record › play › overdub (hold 1 s: clear)</td></tr>
 <tr><td>A♯</td><td>Loop <b>undo</b> last overdub</td><td>Audio loop <b>undo</b> (newest layer)</td></tr>
 <tr><td>B</td><td>Loop <b>stop / start</b></td><td>Audio loop <b>stop / start</b></td></tr></table>
@@ -225,7 +225,7 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>C♯ (throw)</td><td>any knob</td><td>Throw feedback (how long the throw rings; above 100 it slowly grows)</td></tr>
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
-<tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
+<tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3 / 4</td><td>The ARP page knobs: rate / pattern / octaves / gate (shows the ARP page)</td></tr>
 <tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style, continuous) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>layer fade</b></td></tr>
 <tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
@@ -236,7 +236,7 @@ Rows whose value is a word (scale, key, engine, MIDI mode) show plain text. Line
 shows messages when you press a key or turn a combo. The top strip is always visible:</p>
 {strip_svg()}
 <div class="grid">
-{shot("page_play", "PLAY page with the Velvet engine. Strip: page 1 of 8, breath meter on the right.")}
+{shot("page_play", "PLAY page with the Velvet engine. Strip: page 1 of 10, breath meter on the right.")}
 {shot("loop_reverse", "Loop playing in reverse at 1.8× (&lt;1.8). The loop bar shows the position.")}
 {shot("loop_dub", "Overdubbing: tick marks on the loop bar.")}
 {shot("arp_on", "Arpeggiator on: dot next to the breath meter.")}
@@ -346,13 +346,20 @@ and the <b>audio loop waveform</b> with its playhead. Any page key returns to th
 <h2>8. Arpeggiator</h2>
 <p>High F♯ turns it on. Hold notes on the DM48X and the arpeggiator plays them one at a time — each on its own channel, so
 breath and bends still shape every note. It runs at the tap tempo.</p>
-<table><tr><th>Hold F♯ +</th><th>Sets</th></tr>
-<tr><td>knob 1</td><td>Rate: 1/4, 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32</td></tr>
-<tr><td>knob 2</td><td>Pattern: up, down, up-down, pedal (lowest note alternating), random</td></tr>
-<tr><td>knob 3</td><td>Octave range 1–3</td></tr></table>
-<p><b>Breath</b> shapes the notes, not the pattern:</p>
-<ul><li><b>Density</b> — soft breath plays only some steps; stronger breath fills them in; near full breath some steps double (ratchets).</li>
-<li><b>Scatter</b> — above half breath, notes jump an octave up or down (two octaves when strong) and drift off the grid.</li></ul>
+<div class="grid">{shot("page_arp", "ARP")}{shot("page_arpbr", "ARP-BR: breath assign")}</div>
+<h3>ARP page (low G♯)</h3>
+{page_table([("1", "Rate", "1/2, 1/4, 1/4 triplet, 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32 of the tap tempo."),
+             ("2", "Pattern", "Up, down, up-down, pedal (lowest note alternating), random."),
+             ("3", "Octaves", "1–4."),
+             ("4", "Gate", "Note length, 5–100 % of a step. After the gate the note fades at the SHAPE page <b>Release</b> rate: a short gate with a short Release is staccato, a short gate with a long Release lets the notes ring into each other.")])}
+<h3>ARP-BR page (low G♯ again) — what breath does</h3>
+<p>Each knob sets how much breath drives one part of the arp, 0–100. Turn up any combination; all four at 100 is the
+default.</p>
+{page_table([("1", "Volume", "Arp notes follow the breath, in level and velocity. At 0 they all play at full level whatever the breath."),
+             ("2", "Density", "Soft breath plays only some steps; stronger breath fills them in. At 0 every step plays."),
+             ("3", "Spread", "Above half breath, notes jump an octave up or down (two when strong) and drift off the grid. At 0 the notes stay where the pattern puts them."),
+             ("4", "Ratchet", "Near full breath, some steps play twice. At 0, never.")])}
+<p>Hold high F♯ and turn a knob to set the ARP page knobs from any page.</p>
 <p><b>Permutations</b> (high G, on by default): each pass through the pattern rotates the note order, and every other pass is mirrored.
 The looper records what the arpeggiator plays.</p>
 

@@ -2,15 +2,16 @@
    [r eng-in] -> (arp off: pass through) -> [s eng-live]
    arp on: held notes are collected and played one at a time, each on its own MPE channel.
 
-   You choose (hold high F# + knob):  knob 1 rate (1/4 1/8 1/8T 1/16 1/16T 1/32)
-                                      knob 2 pattern (up, down, up-down, pedal, random)
-                                      knob 3 octave range (1-3)
+   ARP page (low G#): rate (1/2 .. 1/32), pattern (up, down, up-down, pedal, random), octaves (1-4),
+                      gate (note length, 5-100 % of a step; the note then fades at the Release rate)
+   ARP-BR page (low G# again): how much breath drives volume, density, spread and ratchets (0..1 each)
    High G toggles permutations: each pass through the pattern rotates the note order,
    and every other pass is mirrored.
    Breath (latest live pressure / CC 2, 7, 11) shapes how the notes come out:
-     density - soft breath plays only some steps, stronger breath fills them in;
-               near full breath, some steps double (ratchets)
-     scatter - above half breath, notes jump an octave up or down and drift off the grid
+     volume  - arp notes follow the breath (0: they play at full level)
+     density - soft breath plays only some steps, stronger breath fills them in
+     spread  - above half breath, notes jump an octave up or down and drift off the grid
+     ratchet - near full breath, some steps double
 """
 from pdgen import Canvas
 from sec_core import chain, to, msg_to
@@ -38,7 +39,20 @@ def arp():
     a.c(isnote, 0, cap, 1)
     a.c(sw, 0, pas, 0)
     a.c(sw, 0, cap, 0)
-    a.c(pas, 0, live, 0)
+    # arp on: breath (pressure, poly pressure, CC 2/7/11) scaled by the Volume amount: 0 = full level
+    VM = "if(engarpon > 0, 127 - engarpvol * (127 - {v}), {v})"
+    pr = to(a, pas, "route 2 3 4", 20, 205)
+    a.c(pr, 3, live, 0)
+    for o, (ex, n, fmt) in enumerate((("$f1; " + VM.format(v="$f2"), 2, "2 $1 $2"),
+                                      ("$f1; " + VM.format(v="$f2") + "; $f3", 3, "3 $1 $2 $3"),
+                                      ("$f1; $f2; if(($f2 == 2) || ($f2 == 7) || ($f2 == 11), " + VM.format(v="$f3") + ", $f3)",
+                                       3, "4 $1 $2 $3"))):
+        x = 20 + o * 30
+        e = to(a, pr, "expr " + ex, x, 230 + o * 100, outlet=o)
+        pk = a.obj("pack" + " 0" * n, x, 255 + o * 100)
+        for k in reversed(range(n)):
+            a.c(e, k, pk, k)
+        a.c(msg_to(a, pk, fmt, x, 280 + o * 100), 0, live, 0)
     # ---- held notes: "0 ch note vel" -> "ch note vel" (channel arrives last = hot)
     cu = to(a, cap, "unpack 0 0 0 0", 120, 205)
     onoff = a.obj("pack 0 0 0", 120, 255)
@@ -97,7 +111,8 @@ def arp():
     dens = a.obj("spigot", 760, 575)
     # look up the note: [t f b b] -> density decision, octave into [f], then the list index
     sel = to(a, li, "t f b b", 760, 525)
-    a.c(to(a, sel, f"expr random(0, 1000) < 1000 * (0.25 + 0.75 * min(1, {B} * 1.4))", 1000, 550, outlet=2), 0, dens, 1)
+    a.c(to(a, sel, f"expr random(0, 1000) < 1000 * (1 - engarpdens * 0.75 * (1 - min(1, {B} * 1.4)))", 1000, 550,
+           outlet=2), 0, dens, 1)
     octf = a.obj("f", 900, 575)
     a.c(li, 1, octf, 1)
     a.c(sel, 1, octf, 0)
@@ -108,7 +123,7 @@ def arp():
     a.c(gu, 1, nn, 2)
     a.c(gu, 0, nn, 0)
     # scatter: above half breath, sometimes an octave up/down (two octaves when strong)
-    S = f"max(0, ({B} - 0.45) / 0.55)"
+    S = f"(engarpspread * max(0, ({B} - 0.45) / 0.55))"
     nt = to(a, nn, f"expr $f3; $f1 + $f2 + if(random(0, 1000) < {S} * 550, (random(0, 2) * 2 - 1) * "
                    f"if({S} > 0.6, 12 * (1 + random(0, 2)), 12), 0)", 760, 675)
     npk = a.obj("pack 0 0", 760, 700)
@@ -122,14 +137,19 @@ def arp():
     a.c(jit, 0, hold, 0)
     play = to(a, hold, "t a a b", 760, 800)
     a.c(play, 2, last, 0)                            # release the previous arp note
-    a.c(msg_to(a, play, "0 $1 $2 100", 860, 825, outlet=1), 0, live, 0)
+    # velocity: breath at the step, by the Volume amount (0 = 127)
+    vt2 = to(a, play, "t a b", 860, 825, outlet=1)
+    vla = a.obj("list append", 860, 875)
+    a.c(to(a, vt2, "expr max(1, int(127 - engarpvol * (127 - engarpbr)))", 940, 850, outlet=1), 0, vla, 1)
+    a.c(vt2, 0, vla, 0)
+    a.c(msg_to(a, vla, "0 $1 $2 $3", 860, 900), 0, live, 0)
     a.c(play, 0, last, 1)
-    # note length 75% of a step; ratchet near full breath: a second hit half a step later
+    # note length: Gate (part of a step); ratchet near full breath: a second hit half a step later
     gate = a.obj("delay", 1300, 850)
-    a.c(to(a, play, f"expr max(10, {STEP} * 0.75)", 1300, 825, outlet=1), 0, gate, 0)
+    a.c(to(a, play, f"expr max(10, {STEP} * engarpgate)", 1300, 825, outlet=1), 0, gate, 0)
     a.c(gate, 0, last, 0)
     rat = a.obj("delay", 1000, 875)
-    rx = to(a, play, f"expr if(({B} > 0.85) && (random(0, 1000) < 350), {STEP} / 2, -1)", 1000, 825, outlet=1)
+    rx = to(a, play, f"expr if(({B} > 0.85) && (random(0, 1000) < 350 * engarprat), {STEP} / 2, -1)", 1000, 825, outlet=1)
     a.c(to(a, rx, "moses 0", 1000, 850), 1, rat, 0)
     a.c(rat, 0, hold, 0)
     # arp off: release, forget held notes, stop pending hits
