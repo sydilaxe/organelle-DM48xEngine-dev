@@ -10,7 +10,7 @@ SETUP
  4. Load DM48 Engine. (Plugged in later? Reload the patch.)
 
 KEYS  (the Organelle keyboard is a control surface; play the DM48X)
- Low octave:  C PLAY  C# LIBRARY  D SHAPE  D# panic  E FX  F SETUP  F# VOICE  G TUNE  A ENGINE
+ Low octave:  C PLAY  C# LIBRARY  D SHAPE  D# panic  E FX  F SETUP  F# VOICE  G TUNE  G# ARP (again: ARP-BR)  A ENGINE
               A# loop undo   B loop stop/start
  High octave: C freeze  C# delay throw (hold)  D octave down  D# octave up  E wet only
               F tap tempo  F# arpeggiator  G arp permutations
@@ -21,7 +21,7 @@ KEYS  (the Organelle keyboard is a control surface; play the DM48X)
    B + knob   loop speed: centre normal, left = reverse (faster further left),
               right = forward (faster further right). MIDI clock follows.
    C + knob   reverb size      C# + knob  throw feedback     E + knob  reverb amount
-   F + knob   tempo 40-200     F# + knob 1 arp rate, knob 2 pattern, knob 3 octaves
+   F + knob   tempo 40-200     F# + knob   the ARP page knobs
    high A + knob 1 audio loop varispeed (left: slower, then reverse; right: faster), 2 pitch (continuous, -12..+12), 3 level, 4 layer fade
    high B + knob  audio loop records Pre / Post effects
    Audio overdubs keep the speed they were recorded at (tape style): dub at 2x, play at 1x = an octave down.
@@ -37,6 +37,9 @@ PAGES (knobs 1-4)
          Japanese, Chinese, SE-Asian, Maqam, Indian, Byzantine), Key. Scales retune each note.
  ENGINE  Engine, MIDI MPE/Standard, Level, MIDI out (Off / Echo / Echo+Clock); line 4 = MIDI in
  VOICE   Poly / Mono legato, Glide 0-2 s, Glide always / legato only, From nearest (poly glide) / last
+ ARP     Rate 1/2-1/32, Pattern (up, down, up-down, pedal, random), Octaves 1-4,
+         Gate 5-100 % (then the note fades at the Release rate)
+ ARP-BR  How much breath drives: Volume, Density, Spread, Ratchet (0-100 each, any mix)
  LIBRARY Knob 2 picks a folder (All, Ambient, Chromatic, Frasil, Richter, World), knob 1 a tuning, Aux sends it (DM48X: Tuning editor > Receive tuning)
 
 SCREEN

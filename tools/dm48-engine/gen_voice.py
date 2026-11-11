@@ -7,7 +7,7 @@ JUST = "engjust"   # just-intonation offsets per pitch class
 
 
 def build(out_dir):
-    v = Canvas(w=1200, h=900)
+    v = Canvas(w=1200, h=1050)
     v.comment("Host voice. Input from [poly]: 'key vel', key = channel * 128 + note.", 20, 5)
     v.comment("Internal channels: 17 * loop layer + MIDI channel (0 = Organelle keys). Master = 17 * layer + 1.", 20, 22)
     i_in = v.obj("inlet", 20, 50)
@@ -43,9 +43,11 @@ def build(out_dir):
     velc = v.obj("expr pow($f1 / 127, $f2)", 80, 240)
     v.c(on_t, 1, velc, 0)
     v.c(v.obj("r eng-curve", 220, 240), 0, velc, 1)
-    lvon = v.msg("$1 4", 80, 270)
+    # every level change goes through the shaper below as "level ms" (ms < 0: go there in -ms, no Release limit)
+    s_lvq = v.obj("s $0-lvq", 80, 295)
+    lvon = v.msg("$1 -4", 80, 270)
     v.c(velc, 0, lvon, 0)
-    v.c(lvon, 0, s_level, 0)
+    v.c(lvon, 0, s_lvq, 0)
     PITCH = (f"expr $f2 + $f3 + {BEND}[$f1] + ($f1 != 17 * int($f1 / 17) + 1) * {BEND}[17 * int($f1 / 17) + 1]"
              f" + {JUST}[($f2 - $f4 + 120) % 12]")
     chA = v.obj("f", 20, 270)
@@ -151,16 +153,16 @@ def build(out_dir):
     v.c(hz, 0, hw, 0)
     act0 = v.msg("0", 120, 410)
     v.c(off_t, 1, act0, 0)
-    relf = v.obj("f 200", 20, 410)
-    v.c(v.obj("r eng-release", 20, 355), 0, relf, 1)
-    v.c(off_t, 0, relf, 0)
-    relt = v.obj("t f f", 20, 440)
-    v.c(relf, 0, relt, 0)
-    lvoff = v.msg("0 $1", 20, 470)
-    v.c(relt, 0, lvoff, 0)
-    v.c(lvoff, 0, s_level, 0)
+    # note-off: fade to 0 at the Release rate, then switch the voice off once the fade is done
+    offt2 = v.obj("t b b", 20, 410)
+    v.c(off_t, 0, offt2, 0)
+    lvoff = v.msg("0 10", 60, 440)
+    v.c(offt2, 1, lvoff, 0)
+    v.c(lvoff, 0, s_lvq, 0)
+    lastms = v.obj("f", 20, 470)
+    v.c(offt2, 0, lastms, 0)
     pad = v.obj("+ 50", 110, 470)
-    v.c(relt, 1, pad, 0)
+    v.c(lastms, 0, pad, 0)
     dly = v.obj("delay 200", 110, 500)
     v.c(pad, 0, dly, 0)
     v.c(stopm, 0, dly, 0)
@@ -222,7 +224,45 @@ def build(out_dir):
     v.c(brx, 0, brm, 0)
     brmsg = v.msg("$1 15", 510, 305)
     v.c(brm, 1, brmsg, 0)
-    v.c(brmsg, 0, s_level, 0)
+    v.c(brmsg, 0, s_lvq, 0)
+    # --- level shaper. Release caps how fast the level may fall: a drop of d takes at least d * Release ms.
+    # The DM48X fades breath to 0 before its note-off, so without this Release had nothing left to fade.
+    # Now a breath that stops fades out over Release; a breath that falls slower is followed as is.
+    # Rises keep their own time. Tracks where the engine's line~ is, so a new value starts from there.
+    lu = v.obj("unpack 0 0", 20, 875)
+    v.c(v.obj("r $0-lvq", 20, 850), 0, lu, 0)
+    CUR = "if($f3 >= $f6, $f5, $f4 + ($f5 - $f4) * $f3 / max(1, $f6))"
+    lx = v.obj(f"expr $f1; if($f2 < 0, -$f2, if($f1 >= {CUR}, $f2, max($f2, ({CUR} - $f1) * $f7))); {CUR}",
+               20, 950)
+    v.c(lu, 1, lx, 1)
+    lt = v.obj("t f b", 20, 900)
+    v.c(lu, 0, lt, 0)
+    tmr = v.obj("timer", 120, 925)
+    v.c(lt, 1, tmr, 1)
+    v.c(tmr, 0, lx, 2)
+    v.c(lt, 0, lx, 0)
+    # expr sends its outputs right to left as it evaluates them: store, then write back once all are out
+    stc, std = v.obj("f", 200, 1000), v.obj("f", 250, 1000)
+    v.c(lx, 2, stc, 1)                     # start = where the line~ is now
+    v.c(lx, 1, std, 1)                     # duration
+    v.c(lx, 1, lastms, 1)
+    lpk = v.obj("pack 0 0", 20, 1000)
+    v.c(lx, 1, lpk, 1)
+    lt2 = v.obj("t f f b", 20, 975)
+    v.c(lx, 0, lt2, 0)
+    v.c(lt2, 2, tmr, 0)                    # restart the clock
+    v.c(lt2, 2, stc, 0)
+    v.c(lt2, 2, std, 0)
+    v.c(stc, 0, lx, 3)
+    v.c(std, 0, lx, 5)
+    v.c(lt2, 1, lx, 4)                     # target
+    v.c(lt2, 0, lpk, 0)
+    v.c(lpk, 0, s_level, 0)
+    rel = v.obj("r eng-release", 300, 925)
+    v.c(rel, 0, lx, 6)
+    r200 = v.msg("200", 400, 925)
+    v.c(v.obj("loadbang", 400, 900), 0, r200, 0)
+    v.c(r200, 0, lx, 6)
     # --- timbre "ch value"
     rtb = v.obj("r eng-timbre", 450, 350)
     tbx = v.obj("expr if(($f1 == $f3) && $f4, $f2, -1)", 450, 375)

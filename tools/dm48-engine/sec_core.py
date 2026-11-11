@@ -87,7 +87,7 @@ def keys():
     A key acts when RELEASED, unless a knob was turned while holding it (then the knob did a combo).
     Delay Throw acts while held."""
     ky = Canvas("keys", w=1500, h=800)
-    ky.comment("Low octave: C play  C# library  D shape  D# panic  E fx  F setup  F# voice  G tune  A engine  A# loop undo  B loop stop/start", 20, 5)
+    ky.comment("Low octave: C play  C# library  D shape  D# panic  E fx  F setup  F# voice  G tune  G# arp (again: arp breath)  A engine  A# loop undo  B loop stop/start", 20, 5)
     ky.comment("High octave: C reverb freeze  C# delay throw (hold)  D octave down  D# octave up  E wet only  F tap tempo  F# arpeggiator  G breath permutations", 20, 22)
     ky.comment("Hold + turn a knob: B = loop speed/direction  C = reverb size  C# = throw feedback  E = reverb amount  F = tempo", 20, 39)
     ku = chain(ky, ky.obj("r notesRaw", 20, 70), ["unpack 0 0"], 20, 95)
@@ -120,6 +120,8 @@ def keys():
     fsel = to(ky, act, "sel 60 61 62 63 64 65 67 69 70 71 72 74 75 76 77 78 79 80 81 82 83", 250, 330)
     spage = ky.obj("s eng-page", 250, 420)
     ky.c(msg_to(ky, to(ky, act, "sel 66", 150, 330), "7", 150, 360), 0, spage, 0)   # low F#: VOICE
+    # low G#: ARP, pressed again: ARP-BR (breath assign), and back
+    ky.c(chain(ky, to(ky, act, "sel 68", 80, 330), ["expr if(engpage == 8, 9, 8)"], 80, 355), 0, spage, 0)
     for i, pg in ((0, 0), (1, 6), (2, 1), (4, 2), (5, 3), (6, 4), (7, 5)):
         ky.c(msg_to(ky, fsel, str(pg), 250 + i * 30, 360, outlet=i), 0, spage, 0)
     # PANIC: everything silent without losing anything - notes off, loops stopped (kept), freeze / throw / arp off,
@@ -188,7 +190,7 @@ def combos():
     """Hold a key and turn a knob: [r $0-combo] 'knob value' while [v engheld] holds the key's note."""
     cb = Canvas("combos", w=1200, h=500)
     cb.comment("Hold + turn any knob. B: loop speed (centre normal, left reverse faster, right forward faster)", 20, 5)
-    cb.comment("C: reverb size  C#: throw feedback  E: reverb amount  F: tempo 40-200 BPM  F#: arp rate / pattern / octaves (knobs 1-3)", 20, 22)
+    cb.comment("C: reverb size  C#: throw feedback  E: reverb amount  F: tempo 40-200 BPM  F#: the ARP page knobs", 20, 22)
     cu = chain(cb, cb.obj("r $0-combo", 20, 50), ["unpack 0 0"], 20, 75)
     vals = [cb.obj("f", 20 + i * 220, 200) for i in range(9)]
     for v_ in vals:
@@ -219,24 +221,17 @@ def combos():
     rm = to(cb, vals[3], "t f f", 680, 225)
     to(cb, rm, "s $0-rmix", 740, 250, outlet=1)
     to(cb, msg_to(cb, to(cb, rm, "expr int($f1 * 100)", 680, 250), "list Reverb $1", 680, 275), "s $0-toast", 680, 300)
-    # F#: arp - knob 1 rate, knob 2 pattern, knob 3 octave range
+    # F#: arp - the ARP page's knobs (rate, pattern, octaves, gate); shows the ARP page
     ak = chain(cb, vals[5], ["expr engcombok; $f1", ], 1100, 225)
     akp = cb.obj("pack 0 0", 1100, 250)
     cb.c(ak, 1, akp, 1)
     cb.c(ak, 0, akp, 0)
-    akr = to(cb, akp, "route 1 2 3", 1100, 275)
-    ap = chain(cb, akr, ["expr int(min($f1, 0.999) * 6)", "change", "sel 0 1 2 3 4 5"], 1100, 300)
-    for i, (nm, dv) in enumerate((("1/4", 1), ("1/8", 2), ("1/8T", 3), ("1/16", 4), ("1/16T", 6), ("1/32", 8))):
-        to(cb, msg_to(cb, ap, str(dv), 1100 + i * 50, 375, outlet=i), "v engarpdiv", 1100 + i * 50, 400)
-        to(cb, msg_to(cb, ap, f"list Arp rate {nm}", 1100 + i * 50, 425, outlet=i), "s $0-toast", 1100, 475)
-    pp = chain(cb, akr, ["expr int(min($f1, 0.999) * 5)", "change", "t f f"], 1450, 300, outlet=1)
-    to(cb, pp, "v engarppat", 1530, 350, outlet=1)
-    pps = to(cb, pp, "sel 0 1 2 3 4", 1450, 350)
-    for i, nm in enumerate(("up", "down", "up-down", "pedal", "random")):
-        to(cb, msg_to(cb, pps, f"list Arp {nm}", 1450 + i * 60, 375, outlet=i), "s $0-toast", 1450, 425)
-    po = chain(cb, akr, ["expr 1 + int(min($f1, 0.999) * 3)", "change", "t f f"], 1800, 300, outlet=2)
-    to(cb, po, "v engarpoct", 1880, 350, outlet=1)
-    to(cb, msg_to(cb, po, "list Arp octaves $1", 1800, 350), "s $0-toast", 1800, 375)
+    akt = to(cb, akp, "t a b", 1100, 275)
+    to(cb, to(cb, to(cb, akt, "expr if(engpage != 8, 8, -1)", 1200, 300, outlet=1), "moses 0", 1200, 325),
+       "s eng-page", 1200, 350, outlet=1)
+    akr = to(cb, akt, "route 1 2 3 4", 1100, 300)
+    for k in range(4):
+        to(cb, akr, f"s $0-k{k + 1}p8", 1100 + k * 80, 350, outlet=k)
     # high A (audio looper): knob 1 speed/direction, 2 pitch, 3 level, 4 layer fade
     lk = chain(cb, vals[7], ["expr engcombok; $f1"], 20, 550)
     lkp = cb.obj("pack 0 0", 20, 575)

@@ -3,7 +3,7 @@ from pdgen import Canvas
 from gen_voice import JUST
 from sec_core import chain, to, msg_to, setv, NOTE_NAMES
 
-PAGES = ["PLAY", "SHAPE", "FX", "SETUP", "TUNE", "ENGINE", "LIBRARY", "VOICE"]
+PAGES = ["PLAY", "SHAPE", "FX", "SETUP", "TUNE", "ENGINE", "LIBRARY", "VOICE", "ARP", "ARP-BR"]
 P = {n: i for i, n in enumerate(PAGES)}
 LIB = P["LIBRARY"]
 
@@ -34,7 +34,9 @@ def handler(c, x, y, entry, default, apply_objs, disp_objs, disp_msg, page, bar=
 REL_CUR = {(0, 1): "engpv1", (0, 2): "engpv2", (0, 3): "engpv3", (0, 4): "engpv4",
            (1, 1): "engcurbamt", (1, 2): "engcurbody", (1, 3): "engcurrelease",
            (2, 1): "engcurdtime", (2, 2): "engcurdfb", (2, 3): "engcurdmix", (2, 4): "engcurrmix",
-           (5, 3): "engcurlevel", (7, 2): "engcurglide"}
+           (5, 3): "engcurlevel", (7, 2): "engcurglide",
+           (8, 4): "engcurarpgate", (9, 1): "engcurarpvol", (9, 2): "engcurarpdens", (9, 3): "engcurarpspread",
+           (9, 4): "engcurarprat"}
 
 
 def knob_map(c, page, k, objs, dest, x, y):
@@ -79,8 +81,12 @@ SAVED = ["bamt", "body", "release", "curve", "dtime", "dfb", "dmix", "rmix",
          "octave", "noterange", "globrange", "vibrate", "tuning", "key", "mode", "level", "mout", "beat"]
 DEFAULTS = [0.6, 0.3, 0.3, 1, 0.45, 0.4, 0.2, 0.35, 0, 48, 2, 5.5, 1, 0, 0, 0.6, 2, 500]
 # saved after the engine name, so a settings.txt from an older version still loads (these keep their defaults)
-SAVED_TAIL = ["vmode", "glide", "gwhen", "gfrom"]
-DEFAULTS_TAIL = [0, 0, 0, 0]
+SAVED_TAIL = ["vmode", "glide", "gwhen", "gfrom",
+              "arprate", "arppat", "arpoct", "arpgate", "arpvol", "arpdens", "arpspread", "arprat"]
+DEFAULTS_TAIL = [0, 0, 0, 0, 5, 0, 0, 0.75, 1, 1, 1, 1]
+# ARP page choices: label, value
+ARP_RATES = [("1/2", 0.5), ("1/4", 1), ("1/4T", 1.5), ("1/8", 2), ("1/8T", 3), ("1/16", 4), ("1/16T", 6), ("1/32", 8)]
+ARP_PATTERNS = ["up", "down", "up-down", "pedal", "random"]
 DEFAULT_LINE = " ".join(str(d) for d in DEFAULTS) + " velvet " + " ".join(str(d) for d in DEFAULTS_TAIL)
 
 
@@ -338,6 +344,35 @@ def ui():
     handler(u, 240, Y, "$0-glide", 0, ["expr int($f1 * $f1 * 2000)", "v engglide"],
             ["expr int($f1 * $f1 * 2000)"], "2 Glide $1ms", 7)
     to(u, u.obj("r $0-glide", 240, Y + 250), "v engcurglide", 240, Y + 275)
+    # ---- ARP (low G#): 1 Rate, 2 Pattern, 3 Octaves, 4 Gate
+    A, AB = P["ARP"], P["ARP-BR"]
+    Y = 1960
+
+    def selector(page, k, nm, labels, vals, default, vname, fmt, x):
+        knob_map(u, page, k, [f"* {len(labels) - 0.01}", "i"], f"$0-{nm}", x, Y - 75)
+        f = u.obj(f"f {default}", x, Y + 25)
+        u.c(u.obj(f"r $0-{nm}", x, Y), 0, f, 0)
+        u.c(u.obj(f"r $0-refresh{page}", x + 70, Y), 0, f, 0)
+        t = to(u, f, "t f f", x, Y + 50)
+        vl = chain(u, msg_to(u, t, "get $1 1", x + 100, Y + 75, outlet=1),
+                   ["list store " + " ".join(str(v) for v in vals)], x + 100, Y + 100)
+        to(u, vl, f"v {vname}", x + 100, Y + 125)
+        lb = chain(u, msg_to(u, t, "get $1 1", x, Y + 75), ["list store " + " ".join(labels)], x, Y + 100)
+        to(u, msg_to(u, lb, fmt, x, Y + 125), f"s $0-disp{page}", x, Y + 150)
+    selector(A, 1, "arprate", [r for r, _ in ARP_RATES], [d for _, d in ARP_RATES], 5, "engarpdiv", "1 Rate $1", 20)
+    selector(A, 2, "arppat", ARP_PATTERNS, range(len(ARP_PATTERNS)), 0, "engarppat", "2 Pattern $1", 240)
+    selector(A, 3, "arpoct", ["1", "2", "3", "4"], [1, 2, 3, 4], 0, "engarpoct", "3 Octaves $1", 460)
+    # gate: note length as a part of the step (5..100 %); after it the note fades at the SHAPE Release rate
+    to(u, u.obj(f"r $0-k4p{A}", 680, Y - 50), "s $0-arpgate", 680, Y - 25)
+    handler(u, 680, Y, "$0-arpgate", 0.75, ["expr max(0.05, $f1)", "v engarpgate"],
+            ["expr int(max(0.05, $f1) * 100)"], "4 Gate $1%", A)
+    # ---- ARP-BR (low G# again): how much breath drives each part of the arp (0 = not at all). Mix them freely.
+    Y = 2160
+    for k, nm, lab in ((1, "arpvol", "Volume"), (2, "arpdens", "Density"), (3, "arpspread", "Spread"),
+                       (4, "arprat", "Ratchet")):
+        x = 20 + (k - 1) * 220
+        to(u, u.obj(f"r $0-k{k}p{AB}", x, Y - 50), f"s $0-{nm}", x, Y - 25)
+        handler(u, x, Y, f"$0-{nm}", 1, [f"v eng{nm}"], ["* 100", "i"], f"{k} {lab} $1", AB)
     return u
 
 

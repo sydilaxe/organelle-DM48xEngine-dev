@@ -19,7 +19,7 @@ def shot(name, cap, w=256):
 # ---------------------------------------------------------------- Organelle M (grey), stylised
 WHITE = ["C", "D", "E", "F", "G", "A", "B"]
 LOW = {"C": "PLAY", "C#": "LIBRARY", "D": "SHAPE", "D#": "PANIC", "E": "FX", "F": "SETUP", "G": "TUNE",
-       "A": "ENGINE", "A#": "UNDO", "B": "LOOP ▶■", "F#": "VOICE", "G#": ""}
+       "A": "ENGINE", "A#": "UNDO", "B": "LOOP ▶■", "F#": "VOICE", "G#": "ARP"}
 HIGH = {"C": "FREEZE", "C#": "THROW", "D": "OCT −", "D#": "OCT +", "E": "WET", "F": "TAP", "F#": "ARP",
         "G": "PERM", "G#": "", "A": "", "A#": "", "B": ""}
 
@@ -213,7 +213,7 @@ the high octave holds performance effects.</p>
 <tr><td>F</td><td>SETUP page</td><td><b>Tap tempo</b> — two taps less than 2 s apart</td></tr>
 <tr><td>F♯</td><td>VOICE page</td><td><b>Arpeggiator</b> on/off</td></tr>
 <tr><td>G</td><td>TUNE page</td><td>Arp <b>permutations</b> on/off</td></tr>
-<tr><td>G♯</td><td>—</td><td>Screen <b>view</b>: pages › scope › audio loop waveform</td></tr>
+<tr><td>G♯</td><td>ARP page (again: ARP-BR)</td><td>Screen <b>view</b>: pages › scope › audio loop waveform</td></tr>
 <tr><td>A</td><td>ENGINE page</td><td><b>Audio loop</b>: record › play › overdub (hold 1 s: clear)</td></tr>
 <tr><td>A♯</td><td>Loop <b>undo</b> last overdub</td><td>Audio loop <b>undo</b> (newest layer)</td></tr>
 <tr><td>B</td><td>Loop <b>stop / start</b></td><td>Audio loop <b>stop / start</b></td></tr></table>
@@ -225,7 +225,7 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>C♯ (throw)</td><td>any knob</td><td>Throw feedback (how long the throw rings; above 100 it slowly grows)</td></tr>
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
-<tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3</td><td>Arp rate / pattern / octave range</td></tr>
+<tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3 / 4</td><td>The ARP page knobs: rate / pattern / octaves / gate (shows the ARP page)</td></tr>
 <tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style, continuous) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>layer fade</b></td></tr>
 <tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
@@ -236,7 +236,7 @@ Rows whose value is a word (scale, key, engine, MIDI mode) show plain text. Line
 shows messages when you press a key or turn a combo. The top strip is always visible:</p>
 {strip_svg()}
 <div class="grid">
-{shot("page_play", "PLAY page with the Velvet engine. Strip: page 1 of 8, breath meter on the right.")}
+{shot("page_play", "PLAY page with the Velvet engine. Strip: page 1 of 10, breath meter on the right.")}
 {shot("loop_reverse", "Loop playing in reverse at 1.8× (&lt;1.8). The loop bar shows the position.")}
 {shot("loop_dub", "Overdubbing: tick marks on the loop bar.")}
 {shot("arp_on", "Arpeggiator on: dot next to the breath meter.")}
@@ -250,7 +250,7 @@ shows messages when you press a key or turn a combo. The top strip is always vis
 <h3>SHAPE — breath and envelope</h3>
 {page_table([("1", "Breath&gt;Tone", "How much breath changes the timbre (all engines). 0 = breath only changes volume."),
              ("2", "Body", "A sine one octave below every note."),
-             ("3", "Release", "Fade after a note ends (10 ms – 3 s)."),
+             ("3", "Release", "How long the sound takes to fade out when your breath stops or the note ends: a full-level note fades in 10 ms – 3 s. A breath that falls slower than this is followed as is; a long Release also smooths quick breath dips."),
              ("4", "Breath Curve", "0.5 = easy to get loud · 1 = linear · 3 = needs strong breath.")])}
 <h3>FX</h3>
 {page_table([("1", "Delay", "20 – 1500 ms. Tap tempo sets it too."),
@@ -346,13 +346,20 @@ and the <b>audio loop waveform</b> with its playhead. Any page key returns to th
 <h2>8. Arpeggiator</h2>
 <p>High F♯ turns it on. Hold notes on the DM48X and the arpeggiator plays them one at a time — each on its own channel, so
 breath and bends still shape every note. It runs at the tap tempo.</p>
-<table><tr><th>Hold F♯ +</th><th>Sets</th></tr>
-<tr><td>knob 1</td><td>Rate: 1/4, 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32</td></tr>
-<tr><td>knob 2</td><td>Pattern: up, down, up-down, pedal (lowest note alternating), random</td></tr>
-<tr><td>knob 3</td><td>Octave range 1–3</td></tr></table>
-<p><b>Breath</b> shapes the notes, not the pattern:</p>
-<ul><li><b>Density</b> — soft breath plays only some steps; stronger breath fills them in; near full breath some steps double (ratchets).</li>
-<li><b>Scatter</b> — above half breath, notes jump an octave up or down (two octaves when strong) and drift off the grid.</li></ul>
+<div class="grid">{shot("page_arp", "ARP")}{shot("page_arpbr", "ARP-BR: breath assign")}</div>
+<h3>ARP page (low G♯)</h3>
+{page_table([("1", "Rate", "1/2, 1/4, 1/4 triplet, 1/8, 1/8 triplet, 1/16, 1/16 triplet, 1/32 of the tap tempo."),
+             ("2", "Pattern", "Up, down, up-down, pedal (lowest note alternating), random."),
+             ("3", "Octaves", "1–4."),
+             ("4", "Gate", "Note length, 5–100 % of a step. After the gate the note fades at the SHAPE page <b>Release</b> rate: a short gate with a short Release is staccato, a short gate with a long Release lets the notes ring into each other.")])}
+<h3>ARP-BR page (low G♯ again) — what breath does</h3>
+<p>Each knob sets how much breath drives one part of the arp, 0–100. Turn up any combination; all four at 100 is the
+default.</p>
+{page_table([("1", "Volume", "Arp notes follow the breath, in level and velocity. At 0 they all play at full level whatever the breath."),
+             ("2", "Density", "Soft breath plays only some steps; stronger breath fills them in. At 0 every step plays."),
+             ("3", "Spread", "Above half breath, notes jump an octave up or down (two when strong) and drift off the grid. At 0 the notes stay where the pattern puts them."),
+             ("4", "Ratchet", "Near full breath, some steps play twice. At 0, never.")])}
+<p>Hold high F♯ and turn a knob to set the ARP page knobs from any page.</p>
 <p><b>Permutations</b> (high G, on by default): each pass through the pattern rotates the note order, and every other pass is mirrored.
 The looper records what the arpeggiator plays.</p>
 
@@ -418,7 +425,7 @@ so that single core is the budget. The patch is built for it:</p>
 <li>All control logic is message-based; the arpeggiator, looper and screen run at control rate.</li></ul>
 <p>The effects, the looper and all engines use only Pd's fast built-in signal objects — no <code>expr~</code>, which is slow on the Organelle's ARM processor. Each engine computes its costliest slow signals (pitch, partial levels, filter curves) at an eighth of the sample rate, and the audio looper only runs the layers you have recorded. Measured offline with all 8 voices sounding, the engines use 0.75–1.9 % of one 2.1 GHz Xeon core on top of the effects (Under the lightest, Steel the heaviest; Hybrid 1.0–2.8 % depending on the source and body, Vowel into Modal the heaviest; Doom 1.6–2.0 %; Frasil 2.5–3.0 %, Metal 2.1 %, Wind 1.8–2.1 %, String 1.7 %, Glint 0.6 %), up to 40 % less than before (Halo −41 %, Under −25 %, Lyra −22 %, Feral −22 %, Velvet −15 %); the audio looper adds 0.15–0.3 %, about a third less.
 A Cortex-A53 core is very roughly 8–10× slower for this kind of work, so expect around 25–50 % of the Pd core on the Organelle M with eight
-voices held — less in normal playing. If you hear clicks, play fewer notes at once with Frasil (all layers), Steel or Hybrid's Vowel/Strings, or lower Reverb. <code>tools/dm48-engine/t_stress.py</code> plays the worst case for every engine (8 voices with moving breath, a MIDI loop and an audio overdub with the loop pitch-shifted): offline, the heaviest (Frasil) uses 3.8 % of the PC core including the effects, about 30–38 % of the Organelle's.</p>
+voices held — less in normal playing. <b>Delay and reverb switch off</b> (and cost nothing) while their mix is at 0 (and no throw or freeze is on): that frees about 5–7 % of the Organelle's core. <b>“Audio overload xN”</b> on line 5 means the Organelle just missed an audio deadline (a crackle is likely there); N counts them since the patch loaded. If you see it, play fewer notes at once with Frasil (all layers), Steel or Hybrid's Vowel/Strings, or turn Delay or Reverb mix to 0. <code>tools/dm48-engine/t_stress.py</code> plays the worst case for every engine (8 voices with moving breath, a MIDI loop and an audio overdub with the loop pitch-shifted): offline, the heaviest (Frasil) uses 3.8 % of the PC core including the effects, about 30–38 % of the Organelle's.</p>
 
 <h2>14. Saving, files and troubleshooting</h2>
 <p>Settings <b>save themselves</b> two seconds after you change something (page settings to <code>settings.txt</code>, each engine's PLAY knobs to <code>engines.txt</code>, in the patch folder). <b>System › Save Patch</b> still works too. Loops are not saved. To go back to the defaults, delete <code>settings.txt</code>.</p>

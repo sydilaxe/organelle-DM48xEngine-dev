@@ -372,6 +372,24 @@ def add(c, a, b, x, y, ao=0, bo=0):
     return o
 
 
+def fx_switch(c, recvs, cond, x, y, block=None):
+    """[switch~ (block)] in canvas c: on while cond holds, off 200 ms after it stops (the mix has faded by then).
+    recvs: receivers whose latest values are kept in [value]s named in cond (e.g. engfxdmix for eng-dmix).
+    switch~ starts off: it comes on when the saved settings arrive at load."""
+    e = c.obj(f"expr {cond}", x, y + 75)
+    for k, rc in enumerate(recvs):
+        tv = to(c, c.obj(f"r {rc}", x + k * 120, y), "t b f", x + k * 120, y + 25)
+        to(c, tv, "v engfx" + rc.replace("eng-", "").replace("-", ""), x + k * 120 + 40, y + 50, outlet=1)
+        c.c(tv, 0, e, 0)
+    sw = c.obj("switch~" + (f" {block}" if block else ""), x, y + 250)
+    sel = chain(c, e, ["change -1", "sel 1 0"], x, y + 100)
+    off = to(c, sel, "delay 200", x + 100, y + 150, outlet=1)
+    c.c(msg_to(c, off, "0", x + 100, y + 175), 0, sw, 0)
+    on = to(c, sel, "t b b", x, y + 150)
+    c.c(msg_to(c, on, "stop", x + 50, y + 175, outlet=1), 0, off, 0)
+    c.c(msg_to(c, on, "1", x, y + 175), 0, sw, 0)
+
+
 def smooth(c, recv, ms, x, y, scale=None):
     """[r recv] -> (scale) -> [$1 ms( -> [line~]"""
     objs = [scale] if scale else []
@@ -396,7 +414,14 @@ def audio():
     # audio looper: "pre" records here and plays back into the effects
     to(a, dry0, "s~ eng-tap-pre", 120, 325)
     dry = add(a, dry0, a.obj("catch~ eng-aret-pre", 120, 300), 20, 325)
-    # ---- delay (stereo ping-pong): input -> L, L -> R, R -> L
+    # ---- delay (stereo ping-pong): input -> L, L -> R, R -> L. Its own subpatch, switched off (no CPU) while its
+    # mix and the throw are 0; out through outlet~ (zeros when off)
+    dsub = Canvas("delay", w=1200, h=700)
+    dsub.comment("ping-pong delay: runs only while Delay mix or a throw is up", 20, 5)
+    din = dsub.obj("inlet~", 20, 30)
+    fx_switch(dsub, ("eng-dmix", "eng-throw"), "(engfxdmix > 0.001) || (engfxthrow > 0.001)", 1000, 30)
+    a_, dry_outer, a = a, dry, dsub
+    dry = din
     dtm = smooth(a, "eng-dtime", 150, 400, 200)
     thr = smooth(a, "eng-throw", 30, 550, 200)
     fb = smooth(a, "eng-dfb", 50, 700, 200)
@@ -423,13 +448,33 @@ def audio():
     to(a, fL, "delwrite~ $0-dr 2000", 500, 530)
     dOutL = mul(a, toneL, dmx, 300, 570)
     dOutR = mul(a, toneR, dmx, 500, 570)
-    # ---- reverb: 4 combs + 2 allpasses per side, freeze holds the tail
+    a.c(dOutL, 0, a.obj("outlet~", 300, 640), 0)
+    a.c(dOutR, 0, a.obj("outlet~", 500, 640), 0)
+    cmd = msg_to(a, a.obj("r eng-panic", 1000, 400), "clear", 1000, 425)   # panic empties the delay
+    for i, (kind, p_) in enumerate(list(a.items)):
+        if kind == "obj" and p_[2].startswith("delwrite~"):
+            a.c(cmd, 0, i, 0)
+    a, dry = a_, dry_outer
+    dbox = a.sub(dsub, 300, 400)
+    a.c(dry, 0, dbox, 0)
+    dOutL, dOutR = (dbox, 0), (dbox, 1)
+    # ---- reverb: an 8-line FDN in its own subpatch, switched off (no CPU) while its mix is 0 and it is not frozen.
+    # (Tried at half the sample rate: no saving - a Pd object costs about the same per block at any rate, and the
+    # reverb is many cheap objects - and the resampling changed the tail)
     frz = smooth(a, "eng-freeze", 80, 900, 400)
     ingain = to(a, frz, "*~ -1", 900, 475)
     ingain = to(a, ingain, "+~ 1", 900, 500)
     rin = add(a, dry, add(a, dOutL, dOutR, 300, 620), 20, 650)
     rin = mul(a, rin, ingain, 20, 675)
     rin = to(a, rin, "*~ 0.5", 20, 700)
+    rsub = Canvas("reverb", w=1800, h=1700)
+    rsub.comment("8-line FDN; runs only while Reverb mix is up or it is frozen", 20, 5)
+    rbox = a.sub(rsub, 20, 750)
+    a.c(rin, 0, rbox, 0)
+    a_ = a
+    a = rsub
+    rin = a.obj("inlet~", 20, 700)
+    fx_switch(a, ("eng-rmix", "eng-freeze"), "(engfxrmix > 0.001) || (engfxfreeze > 0.5)", 1600, 30)
     # 8-line feedback delay network (after VerbRack): input diffusion -> 8 modulated delays mixed by a
     # Hadamard matrix; each line loses treble faster than bass (lows ring 1.3x longer). Size = decay time.
     LENS = [37.3, 43.1, 49.7, 56.9, 63.7, 71.3, 79.1, 87.7]
@@ -503,6 +548,15 @@ def audio():
     lsum = sum4([ins[0], ins[2], ins[4], ins[6]], 20)
     rsum = sum4([ins[1], ins[3], ins[5], ins[7]], 400)
     apL, apR = lsum, rsum
+    a.c(apL, 0, a.obj("outlet~", 20, 1650), 0)
+    a.c(apR, 0, a.obj("outlet~", 400, 1650), 0)
+    pr_ = a.obj("r eng-panic", 1600, 1300)                           # panic empties these lines too
+    cm_ = msg_to(a, pr_, "clear", 1600, 1325)
+    for i, (kind, p_) in enumerate(list(a.items)):
+        if kind == "obj" and p_[2].startswith("delwrite~"):
+            a.c(cm_, 0, i, 0)
+    a = a_
+    apL, apR = (rbox, 0), (rbox, 1)
     rmix = smooth(a, "eng-rmix", 50, 1000, 700, scale="* 0.6")
     wet = smooth(a, "eng-wetonly", 100, 1150, 700)
     dryg = to(a, to(a, wet, "*~ -1", 1150, 775), "+~ 1", 1150, 800)
@@ -535,6 +589,35 @@ def audio():
         if kind == "obj" and p[2].startswith("delwrite~"):
             a.c(cm, 0, i, 0)
     return a
+
+
+def overload():
+    """Audio overload warning. Every 20 ms of Pd's (audio) time, compare the real time that passed: if Pd is more
+    than 15 ms late, the audio could not keep up - a dropout (a crackle) was likely. Shown as a toast (at most every
+    2 s) with the count since load, so a test on the Organelle shows when and how often it happens."""
+    o = Canvas("overload", w=700, h=400)
+    o.comment("Pd late on the audio clock -> 'Audio overload' toast (count since load)", 20, 5)
+    m = o.obj("metro 20", 20, 80)
+    rt = o.obj("realtime", 20, 130)
+    go = chain(o, o.obj("loadbang", 20, 30), ["delay 5000", "t b b"], 20, 30)   # (not while loading)
+    o.c(go, 1, rt, 0)                                    # start the clock, then the checks
+    o.c(msg_to(o, go, "1", 20, 55), 0, m, 0)
+    t = to(o, m, "t b b", 20, 105)
+    o.c(t, 1, rt, 1)                                     # first read the time since the last tick ...
+    o.c(t, 0, rt, 0)                                     # ... then restart it
+    late = to(o, rt, "moses 35", 20, 155)                # more than 35 real ms for 20 ms of audio
+    f = o.obj("f", 120, 205)
+    o.c(to(o, late, "t b", 120, 180, outlet=1), 0, f, 0)
+    cnt = to(o, f, "+ 1", 120, 230)
+    o.c(cnt, 0, f, 1)                                    # count since load
+    to(o, cnt, "v engxruns", 200, 255)
+    gate = o.obj("spigot 1", 120, 255)
+    o.c(cnt, 0, gate, 0)
+    sh = to(o, gate, "t f b", 120, 280)
+    o.c(msg_to(o, sh, "0", 250, 305, outlet=1), 0, gate, 1)                     # at most one toast ...
+    o.c(msg_to(o, to(o, sh, "delay 2000", 250, 330, outlet=1), "1", 250, 355), 0, gate, 1)   # ... every 2 s
+    to(o, msg_to(o, sh, "list Audio overload x$1", 120, 305), "s $0-toast", 120, 330)
+    return o
 
 
 def glue():
