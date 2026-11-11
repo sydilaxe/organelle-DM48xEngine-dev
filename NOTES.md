@@ -49,6 +49,11 @@ This is the working memory for this project: read it first in any new session.
   - Tried the reverb at half the sample rate (`switch~ 32 1 0.5`): no saving. A Pd object costs about the same per block at any rate, the reverb is many cheap objects, and the resampling (plus a lop~ whose coefficient clips at half rate) changed the tail. Reverted.
   - `overload()` (`sec_rest.py`): every 20 ms of Pd time, if more than 35 ms of real time passed, Pd was late on the audio clock: toast "Audio overload xN" (at most every 2 s). The way to see on the device when crackles happen.
   - Offline, a 5 ms-resolution CPU timeline (realtime per metro tick in `pd -batch`) of record + two overdubs with Halo and FX up shows no spike tied to the first overdub (its spikes move between runs: this machine's noise). The looper's arrays are `array define`d, which Pd zero-fills at load, so first writes don't page-fault. Why only the first overdub crackled on the device is still open.
+- **CPU, round 4 (pops with effects on; "Audio overload" when changing MIDI looper states and clearing):** the overloads came from bursts of control work, not DSP.
+  - MIDI looper: stop and clear sent note-offs by scanning `englheld` for every loop channel (17 to 135 × 128 = 15 232 keys, ~1.5 ms on x86, so 15-25 ms on the CM3); REC→PLAY and DUB→PLAY scanned `englive` (2 176 keys). Now `track_on()` (`sec_core.py`) keeps the keys that are on as lines in `[text englheldt]` / `[text englivet]` and the loops visit only those (last line first: a note-off deletes its own line). Measured with `[realtime]` around each action: stop 1.47 → 0.035 ms, clear 1.43 → 0.03 ms, REC→PLAY 0.25 → 0.07 ms, DUB→PLAY 0.24 → 0.035 ms.
+  - Audio looper: a layer cut before a full pass is "dirty" and was zeroed with `const 0` on both 45 s sides when it was next taken, i.e. at the start of a recording (3.2 ms on x86). Now dirty layers that are off are zeroed in the background, 4096 samples a millisecond per side ([array get engzero] → [array set] at an onset), starting 100 ms after they become dirty: a whole layer in ~0.5 s. A layer taken before that is still zeroed at once.
+  - Reverb, lighter: 2 diffusers (was 4), only lines 0 and 5 modulated (`delread4~` on one `osc~`; the rest fixed `delread~`), one `lop~ 5500` damping a line (was two bands with bass 1.3× longer, so T60 is ×1.15 to keep the tail as long), loop gains at control rate into `*~` right inlets that also carry the Hadamard's 1/√8 (no line~, no output scaling stage; taps ×2.4042). T60 at Size 0.5: 6.9 s (was 6.9), 0.9: 14.3 s (was 14.9). Reverb CPU 0.44 → 0.18 % of an x86 core; delay ~0.05 %.
+  - `t_glide.py` now turns delay and reverb off: their tails hold the previous pitch, and with the reverb on the pitch tracker read the mono glide an octave low at one point (the old reverb did it too, with other settings).
 - **Measuring CPU offline:** child CPU time (`resource.getrusage`) of a 100 s run minus a 10 s run (cancels start-up and the 95 MB looper allocation); wall-clock timing is too noisy.
 - **`expr`:**
   - No `wrap()`; use `fmod(x + 4, 1)`.
@@ -117,7 +122,7 @@ This is the working memory for this project: read it first in any new session.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).
 - **Settings:** defaults are used only when `settings.txt` is missing. The harness resets settings before each test run, because auto-save writes into the patch folder.
 - **Knob pickup:** the continuous knobs move relative to their current value (the `REL_CUR` table in `sec_ui.py`). Selector knobs jump.
-- **Reverb:** 8-line Hadamard FDN with 4 input diffusers, modulated `delread4~` lines, two-band damping (bass decays 1.3× longer) and freeze.
+- **Reverb:** 8-line Hadamard FDN with 2 input diffusers, two modulated lines, one damping low-pass a line, and freeze (see CPU round 4).
 - **CPU** (offline x86 benchmark, 8 voices sounding): engines use 0.75-1.9 % of one core above the FX (see CPU round 2). The CM3 is roughly 8-10× slower.
 
 ## What we learned from reference patches (ideas only, not code)

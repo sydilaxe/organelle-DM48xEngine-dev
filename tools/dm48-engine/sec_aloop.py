@@ -20,18 +20,19 @@ NL = 6
 MAXSEC = 45
 MAXA = 44100 * MAXSEC
 RECOV = 1024          # overview of the first take, one value per 50 ms
+ZCH = 4096            # background zeroing: samples per layer side per millisecond
 
 
 def arrays():
     out = []
     for j in range(NL):
         out += [(f"engaL{j}", MAXA), (f"engaR{j}", MAXA), (f"engov{j}", 128)]
-    out += [("engadirty", NL), ("engaon", NL), ("engag", NL), ("engaage", NL), ("engrecov", RECOV), ("engscope", 1024), ("engscy", 128)]
+    out += [("engzero", ZCH), ("engadirty", NL), ("engaon", NL), ("engag", NL), ("engaage", NL), ("engrecov", RECOV), ("engscope", 1024), ("engscy", 128)]
     return out
 
 
 VALUES = ("engastate engalen engalenms engaspd engapitch engalvl engafb engapost engasr engamaxms engaw engak "
-          "engatail engasync engacnt engaph engview engatop engarecn engapk engawA engawB").split()
+          "engatail engasync engacnt engaph engview engatop engarecn engapk engawA engawB engazp engazl").split()
 
 
 def mul2(c, a, b, x, y):
@@ -370,8 +371,40 @@ def control():
     to(a, chain(a, p1t, ["expr engatail", "sel 1"], 1300, 600), "s $0-awend", 1300, 650)
     # stop writing: [s $0-awend]
     we0 = chain(a, a.obj("r $0-awend", 1700, 425), ["t b b"], 1700, 440)
-    tabset(a, chain(a, we0, ["expr (engak == 0) && (engaw >= 0)", "sel 1"], 1850, 440, outlet=1),
-           "engaw; 1", "engadirty", 1850, 490)
+    dsel = chain(a, we0, ["expr (engak == 0) && (engaw >= 0)", "sel 1"], 1850, 440, outlet=1)
+    tabset(a, dsel, "engaw; 1", "engadirty", 1850, 490)
+    # Zero dirty layers that are off in the background, ZCH samples a millisecond (a whole layer in about
+    # half a second), from 100 ms after (once a clear or undo has faded out). Zeroing a whole 45 s layer at once
+    # takes ~3 ms on a PC, far longer on the Organelle: an audio dropout. A layer taken before it is done is
+    # still zeroed at once when it is taken (see $0-ause).
+    zgo = a.obj("delay 100", 2050, 490)
+    a.c(dsel, 0, zgo, 0)
+    zm = a.obj("metro 1", 2050, 540)
+    a.c(msg_to(a, zgo, "bang", 2050, 515), 0, zm, 0)
+    first = "-1"
+    for j in reversed(range(NL)):
+        first = f"if(engadirty[{j}] && (engaon[{j}] == 0), {j}, {first})"
+    zd = chain(a, zm, [f"expr {first}", "moses 0"], 2050, 565)
+    a.c(msg_to(a, zd, "stop", 2050, 615), 0, zm, 0)
+    zt = to(a, zd, "t b b b f", 2150, 615, outlet=1)
+    zl = to(a, zt, "expr $f1; if($f1 != engazl, 0, engazp)", 2350, 640, outlet=3)
+    to(a, zl, "v engazp", 2450, 665, outlet=1)
+    zlt = to(a, zl, "t f f f", 2350, 665)
+    to(a, zlt, "v engazl", 2500, 690, outlet=2)
+    asL, asR = a.obj("array set", 2150, 790), a.obj("array set", 2250, 790)
+    a.c(msg_to(a, zlt, "symbol engaL$1", 2350, 715, outlet=1), 0, asL, 2)
+    a.c(msg_to(a, zlt, "symbol engaR$1", 2450, 715, outlet=0), 0, asR, 2)
+    zon = to(a, zt, "expr engazp", 2250, 690, outlet=2)
+    a.c(zon, 0, asL, 1)
+    a.c(zon, 0, asR, 1)
+    zg = to(a, zt, "array get engzero", 2150, 740, outlet=1)
+    a.c(zg, 0, asL, 0)
+    a.c(zg, 0, asR, 0)
+    zn = chain(a, zt, [f"expr engazp + {ZCH}", f"moses {MAXA}"], 2050, 690)
+    to(a, zn, "v engazp", 2050, 740)
+    zdone = to(a, zn, "t b b", 2100, 740, outlet=1)
+    setv(a, zdone, "engazp", 0, 2100, 790, outlet=1)
+    tabset(a, zdone, "engazl; 0", "engadirty", 2100, 815, outlet=0)
     we = to(a, we0, "t b b b", 1700, 475)
     setv(a, we, "engatail", 0, 1700, 500, outlet=2)
     send(a, we, "stop", "$0-awcmd", 1800, 500, outlet=1)
