@@ -31,6 +31,12 @@ e.g.   Fold Grit Detune Tone;
        0.3 0.2 0.4 0.5;
 
 Tips: keep it light (8 copies run at once). Prefer native signal objects (+~ *~ min~ mtof~ ...)
-over [expr~]: expr~ is several times slower on the Organelle's ARM CPU. Let breath (the level inlet) shape several
+over [expr~]: expr~ is several times slower on the Organelle's ARM CPU. The costly objects are the
+ones with maths inside: pow~ mtof~ vcf~ exp~ cost 10-20 [*~] each, osc~ cos~ sqrt~ lop~ rpole~ about 5.
+Costly slow signals (pitch -> Hz, pow~ / exp~ / mtof~ curves) can run 8x cheaper in a subpatch with
+[block~ 8 1 0.125]: in through [inlet~], out through [outlet~ hold] for an oscillator frequency, or
+[outlet~ lin] (costs about 10 [*~]) for anything that scales or filters audio - a stepped amplitude
+or cutoff crackles. No [r~] inside. The bundled engines do this in their "pd ctl" subpatch.
+Let breath (the level inlet) shape several
 things a little - brightness, harmonics, noise, detune - rather than one thing a lot.
 After adding a file, reload the patch; the new engine appears on the ENGINE page.

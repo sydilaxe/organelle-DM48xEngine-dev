@@ -1,0 +1,2 @@
+Bright Buzz Stiff Sustain;
+0.5 0.25 0.1 0.6;

@@ -36,7 +36,13 @@ e.g.   Fold Grit Detune Tone;
        0.3 0.2 0.4 0.5;
 
 Tips: keep it light (8 copies run at once). Prefer native signal objects (+~ *~ min~ mtof~ ...)
-over [expr~]: expr~ is several times slower on the Organelle's ARM CPU. Let breath (the level inlet) shape several
+over [expr~]: expr~ is several times slower on the Organelle's ARM CPU. The costly objects are the
+ones with maths inside: pow~ mtof~ vcf~ exp~ cost 10-20 [*~] each, osc~ cos~ sqrt~ lop~ rpole~ about 5.
+Costly slow signals (pitch -> Hz, pow~ / exp~ / mtof~ curves) can run 8x cheaper in a subpatch with
+[block~ 8 1 0.125]: in through [inlet~], out through [outlet~ hold] for an oscillator frequency, or
+[outlet~ lin] (costs about 10 [*~]) for anything that scales or filters audio - a stepped amplitude
+or cutoff crackles. No [r~] inside. The bundled engines do this in their "pd ctl" subpatch.
+Let breath (the level inlet) shape several
 things a little - brightness, harmonics, noise, detune - rather than one thing a lot.
 After adding a file, reload the patch; the new engine appears on the ENGINE page.
 """
@@ -52,6 +58,7 @@ def frame(title):
     e.c(il, 0, env, 0)
     tb = e.obj("line~", 500, 55)
     e.c(it, 0, tb, 0)
+    e.ip = ip                                             # the raw pitch inlet ("note ms"; ms 0 = a new note)
     return e, pl, env, tb
 
 
@@ -117,6 +124,57 @@ def r(e, name, x, y):
     return e.obj(f"r~ {name}", x, y)
 
 
+class Ctl:
+    """A voice's slow control signals, computed at 1/8 of the sample rate in a [block~ 8 1 0.125] subpatch:
+    pitch -> Hz, breath and knob curves, filter cutoffs, partial amplitudes. They move far slower than audio, and
+    the costly objects (mtof~, pow~, exp~) cost an eighth here. In through inlet~ (decimated). Out through
+    [outlet~ lin] (o(): interpolated; it costs about 10 [*~]) for anything that scales or filters audio - a
+    stepped amplitude, drive or cutoff crackles when breath moves fast - or [outlet~ hold] (f(): about 3 [*~])
+    for an oscillator's frequency, where an 8-sample step is inaudible. So only move a formula in when it removes
+    more than its outlet costs: a transcendental, or several plain operations. A fast envelope used as a VCA is
+    cheaper kept outside (one lop~). [r~] can't be used inside (its block size must match its [s~]), so shared
+    signals come in with i(outer). Inside, work on the canvas self.s."""
+
+    def __init__(self, e, x, y):
+        self.e, self.s = e, Canvas("ctl", w=1600, h=900)
+        self.s.comment("Slow control signals at 1/8 of the sample rate: in = inlet~ (decimated), "
+                       "out = outlet~ lin (or hold for frequencies)", 20, 5)
+        self.s.obj("block~ 8 1 0.125", 1400, 5)
+        self.box = e.sub(self.s, x, y)
+        self.ins, self.nout, self.col = {}, 0, 0
+
+    def i(self, outer):
+        """an engine signal -> its inlet~ inside"""
+        if outer not in self.ins:
+            k = len(self.ins)
+            self.ins[outer] = self.s.obj("inlet~", 20 + k * 80, 30)
+            self.e.c(outer, 0, self.box, k)
+        return self.ins[outer]
+
+    def o(self, inner, lin=True):
+        """an inner signal -> (subpatch, outlet) for the engine, interpolated"""
+        k = self.nout
+        self.nout += 1
+        self.s.c(inner, 0, self.s.obj("outlet~ lin" if lin else "outlet~ hold", 20 + k * 80, 860), 0)
+        return (self.box, k)
+
+    def f(self, inner):
+        """a frequency (or rate) for an oscillator -> the engine, stepped: cheaper, and an oscillator smooths it"""
+        return self.o(inner, lin=False)
+
+    def ex(self, text, ins):
+        """formula on inner signals"""
+        self.col += 1
+        return ex(self.s, text, ins, 20 + (self.col % 11) * 140, 120 + (self.col // 11) * 250)
+
+    def freq(self, pl, extra=None):
+        """pitch (engine signal, MIDI) + host vibrato (+ extra inner signal, semitones) -> Hz, inside"""
+        pv = add(self.s, self.i(pl), self.i(self.e.obj("r~ eng-vib", 20, 80)), 20, 600)
+        if extra is not None:
+            pv = add(self.s, pv, extra, 20, 625)
+        return chain(self.s, pv, ["mtof~", "clip~ 1 20000"], 20, 650)
+
+
 def volt(path):
     """raw / electric: two saws -> wavefolder -> sample-rate grit -> filter"""
     e, pl, env, tb = frame("Volt - raw and electric. Two saws, a wavefolder, sample-rate grit, a filter. "
@@ -124,11 +182,11 @@ def volt(path):
     p1, p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
                             enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
     eb = mul(e, env, bamt, 650, 80)                     # breath x Breath>Tone
-    strain = chain(e, eb, ["*~ 0.08"], 650, 105)        # up to +8 cents
-    f = pitch_to_freq(e, pl, strain, 20, 80)
-    nn = ex(e, "$v1 / max(1, $v2)", [r(e, "eng-sawk", 150, 180), f], 150, 205)   # sr / (2.5 f)
-    det = ex(e, "1 + $v1 * $v1 * 0.02 + $v2 * 0.004", [p3, eb], 250, 180)
-    f2 = mul(e, f, det, 250, 205)
+    c = Ctl(e, 300, 100)                                # pitch, saw rates, grit rate, cutoff at sr/8
+    ebi = c.i(eb)
+    fi = c.freq(pl, chain(c.s, ebi, ["*~ 0.08"], 650, 105))   # breath strains up to +8 cents
+    nn = c.f(c.ex("$v1 / max(1, $v2)", [c.i(r(e, "eng-sawk", 150, 180)), fi]))   # sr / (2.5 f)
+    f, f2 = c.f(fi), c.f(c.ex("$v1 * (1 + $v2 * $v2 * 0.02 + $v3 * 0.004)", [fi, c.i(p3), ebi]))
     s1, s2 = e.obj("lib/bsaw", 20, 240), e.obj("lib/bsaw", 250, 240)
     e.c(f, 0, s1, 0)
     e.c(nn, 0, s1, 1)
@@ -140,12 +198,12 @@ def volt(path):
     fx = mul(e, x, F, 20, 330)
     fold = chain(e, fx, ["*~ 0.5", "-~ 0.25", "cos~"], 20, 355)
     # grit: sample-and-hold at a rate that drops with Grit and breath
-    gr = ex(e, "max(800, 44100 * (1 - $v1 * 0.92) * (1 - $v2 * 0.25))", [p2, eb], 400, 380)
+    gr = c.ex("max(800, 44100 * (1 - $v1 * 0.92) * (1 - $v2 * 0.25))", [c.i(p2), ebi])
     sh = e.obj("samphold~", 20, 460)
     e.c(fold, 0, sh, 0)
-    e.c(chain(e, gr, ["phasor~"], 400, 405), 0, sh, 1)
+    e.c(chain(e, c.f(gr), ["phasor~"], 400, 405), 0, sh, 1)
     # filter: 150 Hz * 2^(tone*5.5 + breath*3 + timbre) (vcf~ needs cutoff well under q * sr / 2pi)
-    cut = ex(e, "min(7000, 150 * pow(2, $v1 * 5.5 + $v2 * 3 + ($v3 - 0.5) * 2))", [p4, eb, tb], 400, 480)
+    cut = c.o(c.ex("min(7000, 150 * pow(2, $v1 * 5.5 + $v2 * 3 + ($v3 - 0.5) * 2))", [c.i(p4), ebi, c.i(tb)]))
     vcf = e.obj("vcf~ 1.3", 20, 520)
     e.c(sh, 0, vcf, 0)
     e.c(cut, 0, vcf, 1)
@@ -160,17 +218,17 @@ def halo(path):
     """ethereal / resonant: partials that bloom with breath + noise ringing in tuned resonators"""
     e, pl, env, tb = frame("Halo - ethereal and resonant. Sine partials bloom open with breath; breath noise "
                            "rings tuned resonators. Breath: upper partials, air, shimmer, resonator brightness.")
-    p1, p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
-                            enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
+    p1, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in enumerate(("$1-p1~", "$1-p3~", "$1-p4~", "eng-bamt~")))
     es = chain(e, env, ["lop~ 4"], 300, 80)             # slow, soft swell
     eb = mul(e, es, bamt, 650, 80)
-    f = pitch_to_freq(e, pl, None, 20, 80)
+    c = Ctl(e, 300, 120)                                # partial frequencies and amplitudes (pow~) at sr/8
+    fi, ebi, p4i = c.freq(pl), c.i(eb), c.i(p4)
+    f = c.f(fi)
     # partials 1, 2, 3, 4 (3 and 4 drift with Shimmer); amplitudes open with breath x Bloom
     parts = []
     for h, x in ((1, 20), (2, 150), (3, 280), (4.01, 410)):
         if h in (3, 4.01):
-            rat = ex(e, f"{h} * (1 + $v1 * {0.004 if h == 3 else 0.007})", [p1], x, 180)
-            fh = mul(e, f, rat, x, 205)
+            fh = c.f(c.ex(f"$v1 * {h} * (1 + $v2 * {0.004 if h == 3 else 0.007})", [fi, c.i(p1)]))
         elif h == 2:
             fh = chain(e, f, ["*~ 2"], x, 205)
         else:
@@ -181,7 +239,7 @@ def halo(path):
             continue
         k = {2: 1.5, 3: 2.2, 4.01: 3.0}[h]
         lv = {2: 0.45, 3: 0.3, 4.01: 0.22}[h]
-        amp = ex(e, f"{lv} * pow(min(1, $v1 * (0.4 + $v2 * 1.6)), {k} - $v2)", [eb, p4], x, 260)
+        amp = c.o(c.ex(f"{lv} * pow(min(1, $v1 * (0.4 + $v2 * 1.6)), {k} - $v2)", [ebi, p4i]))
         parts.append(mul(e, o, amp, x, 290))
     s = add(e, add(e, parts[0], parts[1], 20, 330), add(e, parts[2], parts[3], 280, 330), 20, 360)
     # noise through two resonators at 2f and 3.01f (centre rises a little with breath and timbre)
@@ -214,15 +272,18 @@ def under(path):
     p1, p2, p3, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
                         enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "eng-bamt~")))
     eb = mul(e, env, bamt, 650, 80)
-    f0 = pitch_to_freq(e, pl, None, 20, 80)
+    c = Ctl(e, 300, 100)                                # pitch -> Hz at sr/8
+    f0 = c.f(c.freq(pl))
     octm = chain(e, e.obj("r $1-p4", 300, 130), ["expr pow(0.5, int(min($f1, 0.999) * 3))"], 300, 155)
     f = e.obj("*~ 1", 20, 180)
     e.c(f0, 0, f, 0)
     e.c(octm, 0, f, 1)
     subs = []
     for d, x in ((1, 20), (2, 150), (3, 280), (4, 410)):
-        fd = chain(e, f, [f"*~ {1 / d}"], x, 210)
+        fd = chain(e, f, [f"*~ {1 / d}"], x, 210) if d > 1 else f
         o = chain(e, fd, ["osc~"], x, 235)
+        if d == 2:
+            half = o                                    # f/2 is also the Body tone
         if d == 1:
             subs.append(o)
             continue
@@ -235,7 +296,7 @@ def under(path):
     vcf = e.obj("vcf~ 1.2", 20, 560)
     e.c(sat, 0, vcf, 0)
     e.c(cut, 0, vcf, 1)
-    body = mul(e, chain(e, f, ["*~ 0.5", "osc~"], 300, 560), r(e, "eng-body~", 400, 585), 300, 610)
+    body = mul(e, half, r(e, "eng-body~", 400, 585), 300, 610)
     mix = add(e, chain(e, vcf, [], 20, 560), body, 20, 640)
     e.conns.remove((vcf, 0, mix, 0))
     e.c(vcf, 1, mix, 0)
@@ -249,23 +310,21 @@ def velvet(path):
     p1, p2, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
                         enumerate(("$1-p1~", "$1-p2~", "$1-p4~", "eng-bamt~")))
     sw = chain(e, e.obj("r $1-p3", 300, 80), ["expr 20 - $f1 * 19.7"], 300, 105)
-    es = e.obj("lop~ 10", 300, 140)
+    es = e.obj("lop~ 10", 300, 140)                     # swell (0.3 .. 20 Hz)
     e.c(env, 0, es, 0)
     e.c(sw, 0, es, 1)
     eb = mul(e, es, bamt, 650, 80)
-    # slow per-voice drift that deepens with breath
-    drift = mul(e, chain(e, e.obj("noise~", 450, 80), ["lop~ 0.7", "*~ 6"], 450, 105),
-                chain(e, eb, ["*~ 0.05", "+~ 0.01"], 550, 105), 450, 160)
-    f = pitch_to_freq(e, pl, drift, 20, 80)
-    nn = ex(e, "$v1 / max(1, $v2)", [r(e, "eng-sawk", 150, 180), f], 150, 205)   # sr / (2.5 f)
-    d = ex(e, "$v1 * $v1 * 0.018 + $v2 * 0.005", [p2, eb], 300, 180)
-    df = mul(e, f, d, 300, 205)
-    flo = e.obj("-~", 250, 230)
-    e.c(f, 0, flo, 0)
-    e.c(df, 0, flo, 1)
-    fhi = add(e, f, df, 380, 230)
+    c = Ctl(e, 300, 170)                                # drift, the saws' frequencies and the cutoff at sr/8
+    cs, ebi = c.s, c.i(eb)
+    # slow per-voice drift that deepens with breath (noise at 1/8 of the rate: x 1/sqrt(8) for the same depth)
+    drift = mul(cs, chain(cs, cs.obj("noise~", 450, 80), ["lop~ 0.7", "*~ 2.1213"], 450, 105),
+                chain(cs, ebi, ["*~ 0.05", "+~ 0.01"], 550, 105), 450, 160)
+    fi = c.freq(pl, drift)
+    nn = c.f(c.ex("$v1 / max(1, $v2)", [c.i(r(e, "eng-sawk", 150, 180)), fi]))   # sr / (2.5 f)
+    df = c.ex("$v1 * ($v2 * $v2 * 0.018 + $v3 * 0.005)", [fi, c.i(p2), ebi])
+    f = c.f(fi)
     saws = []
-    for i, src in enumerate((f, flo, fhi)):
+    for i, src in enumerate((f, c.f(c.ex("$v1 - $v2", [fi, df])), c.f(c.ex("$v1 + $v2", [fi, df])))):
         s = e.obj("lib/bsaw", 20 + i * 140, 270)
         e.c(src, 0, s, 0)
         e.c(nn, 0, s, 1)
@@ -277,14 +336,13 @@ def velvet(path):
     mix = chain(e, add(e, mix, sub, 20, 380), ["*~ 0.4"], 20, 405)
     warm = ex(e, "1 + $v1 * 1.5 + $v2 * 0.6", [p4, eb], 300, 405)
     sat = softclip(e, mul(e, mix, warm, 20, 430), 20, 455)
-    cut = ex(e, "min(6500, mtof(30 + $v1 * 70 + $v2 * 40 + ($v3 - 0.5) * 24))", [p1, eb, tb], 400, 560)
+    cut = c.o(c.ex("min(6500, mtof(30 + $v1 * 70 + $v2 * 40 + ($v3 - 0.5) * 24))", [c.i(p1), ebi, c.i(tb)]))
     v1 = e.obj("vcf~ 1.3", 20, 600)
     e.c(sat, 0, v1, 0)
     e.c(cut, 0, v1, 1)
     v2 = e.obj("vcf~ 1.3", 20, 640)
     e.c(v1, 1, v2, 0)
     e.c(cut, 0, v2, 1)
-    lv = chain(e, v2, [], 20, 640)
     out = e.obj("*~ 1", 20, 680)
     e.c(v2, 1, out, 0)
     finish(e, out, es, 2.0, 20, 710, path)
@@ -385,14 +443,16 @@ def lyra(path):
                            "Breath: deeper cross-mod, sharper waves, wider beating, more drive. Knobs: Mod, Sharp, Detune, Drive")
     p1, p2, p3, p4, bamt = (r(e, n, 650 + i * 90, 30) for i, n in
                             enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "$1-p4~", "eng-bamt~")))
-    es = chain(e, env, ["lop~ 6"], 300, 80)            # Lyra-like soft swell
+    es = chain(e, env, ["lop~ 6"], 300, 80)             # Lyra-like soft swell
     eb = mul(e, es, bamt, 650, 80)
-    # slow random drift per voice (the original's vibrato source)
-    drift = mul(e, chain(e, e.obj("noise~", 450, 80), ["lop~ 0.5", "*~ 8"], 450, 105),
-                chain(e, eb, ["*~ 0.06", "+~ 0.02"], 550, 105), 450, 160)
-    f = pitch_to_freq(e, pl, drift, 20, 80)
-    det = ex(e, "1 + $v1 * $v1 * 0.012 + $v2 * 0.004", [p3, eb], 250, 180)
-    fb = mul(e, f, det, 250, 205)
+    c = Ctl(e, 300, 100)                                # drift and the two frequencies at sr/8
+    cs, ebi = c.s, c.i(eb)
+    # slow random drift per voice (the original's vibrato source; noise at 1/8 of the rate: x 1/sqrt(8))
+    drift = mul(cs, chain(cs, cs.obj("noise~", 450, 80), ["lop~ 0.5", "*~ 2.8284"], 450, 105),
+                chain(cs, ebi, ["*~ 0.06", "+~ 0.02"], 550, 105), 450, 160)
+    fi = c.freq(pl, drift)
+    f = c.f(fi)
+    fb = c.f(c.ex("$v1 * (1 + $v2 * $v2 * 0.012 + $v3 * 0.004)", [fi, c.i(p3), ebi]))
     m = ex(e, "$v1 * $v1 * 1.4 + $v2 * 0.9", [p1, eb], 400, 180)      # cross-mod index
     # phase modulation each way (keeps the pitch steady); B hears A from the previous block
     aprev = e.obj("delread~ $0-a 0", 400, 230)
@@ -416,16 +476,16 @@ def lyra(path):
 
 
 def bsaw(path):
+    """u - 0.5 sin(pi clip(u n, -0.5, 0.5)), u = wrap(phase + 0.5) - 0.5: the saw's jump (at u = +-0.5) is cancelled,
+    and the correction rebuilds it as a steep but smooth edge around u = 0, n = sr / (2.5 f) samples wide.
+    (The old version also added a naive saw and a step, which cancel out: 4 objects for nothing.)"""
     bs = Canvas(w=700, h=450)
     bs.comment("Band-limited saw. Left: frequency (signal). Right: sr / (2.5 * freq) as a signal.", 20, 5)
     b_f, b_n = bs.obj("inlet~", 20, 30), bs.obj("inlet~", 300, 30)
-    ph = chain(bs, b_f, ["phasor~"], 20, 60)
-    naive = chain(bs, ph, ["-~ 0.5"], 20, 90)
-    u = chain(bs, ph, ["+~ 0.5", "wrap~", "-~ 0.5"], 150, 90)
-    st = chain(bs, u, ["*~ 1e+06", "clip~ -0.5 0.5"], 150, 170)
+    u = chain(bs, b_f, ["phasor~", "+~ 0.5", "wrap~", "-~ 0.5"], 20, 60)
     w = chain(bs, mul(bs, u, b_n, 300, 170), ["clip~ -0.5 0.5", "*~ 0.5", "-~ 0.25", "cos~", "*~ 0.5"], 300, 195)
     a2 = bs.obj("-~", 20, 360)
-    bs.c(add(bs, naive, st, 20, 330), 0, a2, 0)
+    bs.c(u, 0, a2, 0)
     bs.c(w, 0, a2, 1)
     bs.c(a2, 0, bs.obj("outlet~", 20, 400), 0)
     bs.save(path)
@@ -449,31 +509,38 @@ def feral(path):
     k1, k2, k3, bamt = (e.obj(f"r~ {n}", 700 + i * 90, 40) for i, n in
                         enumerate(("$1-p1~", "$1-p2~", "$1-p3~", "eng-bamt~")))
     SR = 44100
+    # the slow part (puffs, wander, pitch, vactrol, gate cutoff, VCA) runs at SR / 8:
+    # one-pole coefficients a become a^8 (same time constant), differences x 1/8 (same slope)
+    c = Ctl(e, 300, 100)
+    cs = c.s
+    D = 8
+    lvi = c.i(lv)
     # Tail knob (control rate): vactrol release coefficient, and puff sensitivity
-    k4 = e.obj("r $1-p4", 1100, 40)
-    tc = chain(e, k4, [f"expr exp(-1 / ((0.03 + $f1 * $f1 * 0.6) * {SR}))", "t f f"], 1100, 65)
-    tg = chain(e, tc, ["expr 1 - $f1"], 1200, 115, outlet=0)
+    tc = chain(cs, cs.obj("r $1-p4", 1100, 40), [f"expr exp(-1 / ((0.03 + $f1 * $f1 * 0.6) * {SR / D}))", "t f f"],
+               1100, 65)
+    tg = chain(cs, tc, ["expr 1 - $f1"], 1200, 115, outlet=0)
     # puff: how fast breath is rising (differentiator, rectified, held ~30 ms)
-    dv = chain(e, lv, ["rzero~ 1", "clip~ 0 1", "*~ 500"], 300, 95)
-    pf = chain(e, dv, ["rpole~ 0.9993", "*~ 0.0007", "clip~ 0 1"], 300, 170)
-    puff = pf
-    # breath, scaled by Breath>Tone
-    br = mul(e, lv, chain(e, bamt, ["*~ 0.65", "+~ 0.35"], 420, 95), 300, 245)
+    dv = chain(cs, lvi, ["rzero~ 1", "clip~ 0 1", f"*~ {500 / D}"], 300, 95)
+    puffi = chain(cs, dv, [f"rpole~ {0.9993 ** D:.8f}", f"*~ {1 - 0.9993 ** D:.8f}", "clip~ 0 1"], 300, 170)
+    puff = c.o(puffi)
     # wander: sample-and-hold random steps, smoothed
-    sh = e.obj("samphold~", 900, 120)
-    e.c(e.obj("noise~", 900, 95), 0, sh, 0)
-    e.c(e.obj("phasor~ 2.3", 980, 95), 0, sh, 1)
-    wd = chain(e, sh, ["*~ 0.0003", "rpole~ 0.9997", "*~ 0.12"], 900, 145)
+    sh = cs.obj("samphold~", 900, 120)
+    cs.c(cs.obj("noise~", 900, 95), 0, sh, 0)
+    cs.c(cs.obj("phasor~ 2.3", 980, 95), 0, sh, 1)
+    wd = chain(cs, sh, [f"*~ {1 - 0.9997 ** D:.8f}", f"rpole~ {0.9997 ** D:.8f}", "*~ 0.12"], 900, 145)
     # pitch (MIDI) -> Hz: wander, puffs push sharp, host vibrato
-    m = add(e, add(e, pl, e.obj("r~ eng-vib", 120, 95), 20, 120), add(e, wd, chain(e, puff, ["*~ 0.35"], 200, 200), 200, 225), 20, 250)
-    hz = chain(e, m, ["mtof~", "clip~ 1 6000"], 20, 275)
+    m = add(cs, add(cs, c.i(pl), c.i(e.obj("r~ eng-vib", 120, 95)), 20, 120),
+            add(cs, wd, chain(cs, puffi, ["*~ 0.35"], 200, 200), 200, 225), 20, 250)
+    hzi = chain(cs, m, ["mtof~", "clip~ 1 6000"], 20, 275)
+    hz = c.f(hzi)
+    bro = mul(e, lv, chain(e, bamt, ["*~ 0.65", "+~ 0.35"], 420, 300), 330, 325)   # breath, scaled by Breath>Tone
     ph = e.obj("phasor~", 20, 325)
     e.c(hz, 0, ph, 0)
     dt = chain(e, hz, [f"*~ {1 / SR:.9f}"], 120, 325)
     # A: capacitor-charge curve: a straight ramp bending into a charging curve (sin quarter) as breath rises,
     # with poly-BLEP at the reset
     cq = chain(e, ph, ["*~ 0.25", "-~ 0.25", "cos~"], 220, 350)
-    cm = chain(e, mul(e, br, br, 330, 350), ["clip~ 0 1"], 330, 375)
+    cm = chain(e, mul(e, bro, bro, 330, 350), ["clip~ 0 1"], 330, 375)
     nd = e.obj("-~", 220, 400)                            # ramp -> curve by cm
     e.c(cq, 0, nd, 0)
     e.c(ph, 0, nd, 1)
@@ -494,14 +561,8 @@ def feral(path):
     e.c(naive, 0, capo, 0)
     e.c(blep, 0, capo, 1)
     # B: hard-synced slave: wrap(phase * ratio), ratio swept by breath and puffs, capped below 7 kHz
-    r1 = add(e, chain(e, k1, ["*~ 3", "+~ 1"], 450, 300), mul(e, mul(e, br, k1, 550, 300), e.obj("sig~ 5", 650, 275), 550, 325), 450, 350)
-    rr = add(e, r1, chain(e, puff, ["*~ 2"], 650, 350), 450, 375)
-    cap = e.obj("/~", 600, 400)
-    e.c(e.obj("sig~ 7000", 600, 375), 0, cap, 0)
-    e.c(hz, 0, cap, 1)
-    rat = e.obj("min~", 450, 425)
-    e.c(rr, 0, rat, 0)
-    e.c(cap, 0, rat, 1)
+    # (full rate: the ratio multiplies the phase, so a stepped ratio would make the slave jump)
+    rat = ex(e, "min($v1 * 3 + 1 + $v2 * $v1 * 5 + $v3 * 2, 7000 / $v4)", [k1, bro, puff, hz], 450, 300)
     syn = chain(e, mul(e, ph, rat, 450, 450), ["wrap~", "*~ 2", "-~ 1"], 450, 475)
     # half-rate square sub, slightly rounded
     sq = chain(e, chain(e, hz, ["*~ 0.5", "phasor~"], 650, 450), ["-~ 0.5", "*~ -1e+06", "clip~ -1 1", "*~ 0.15", "rpole~ 0.85"], 650, 500)
@@ -515,29 +576,29 @@ def feral(path):
     crk = add(e, mul(e, hit, chain(e, puff, ["*~ 1.2"], 1000, 700), 900, 725), mul(e, mul(e, nz, lv, 1100, 650), e.obj("sig~ 0.08", 1150, 675), 1100, 700), 900, 750)
     pre = add(e, mix, crk, 20, 780)
     # asymmetric diode clipper (even harmonics): y / (1 + 1.4|y| - 0.4y)  =  y/(1+y) above 0, y/(1+1.8|y|) below
-    drv = add(e, add(e, chain(e, mul(e, k2, k2, 220, 780), ["*~ 7", "+~ 1"], 220, 805), chain(e, br, ["*~ 2"], 320, 805), 220, 855),
-              chain(e, puff, ["*~ 5"], 420, 805), 220, 880)
+    drv = ex(e, "$v1 * $v1 * 7 + 1 + $v2 * 2 + $v3 * 5", [k2, bro, puff], 220, 805)
     y = mul(e, pre, drv, 20, 905)
     den = add(e, chain(e, y, ["abs~", "*~ 1.4", "+~ 1"], 120, 930), chain(e, y, ["*~ -0.4"], 220, 930), 120, 980)
     dio = e.obj("/~", 20, 1005)
     e.c(y, 0, dio, 0)
     e.c(den, 0, dio, 1)
     # vactrol: opens with breath at once, closes with a slow tail
-    tl = e.obj("*~ 0", 450, 810)
-    e.c(lv, 0, tl, 0)
-    e.c(tg, 0, tl, 1)
-    tr = e.obj("rpole~", 450, 835)
-    e.c(tl, 0, tr, 0)
-    e.c(tc, 1, tr, 1)
-    vac = e.obj("max~", 300, 885)
-    e.c(lv, 0, vac, 0)
-    e.c(chain(e, tr, ["*~ 0.92"], 450, 860), 0, vac, 1)
-    vg = chain(e, add(e, vac, chain(e, puff, ["*~ 0.3"], 400, 885), 300, 910), ["clip~ 0 1"], 300, 935)
+    tl = cs.obj("*~ 0", 450, 810)
+    cs.c(lvi, 0, tl, 0)
+    cs.c(tg, 0, tl, 1)
+    tr = cs.obj("rpole~", 450, 835)
+    cs.c(tl, 0, tr, 0)
+    cs.c(tc, 1, tr, 1)
+    vac = cs.obj("max~", 300, 885)
+    cs.c(lvi, 0, vac, 0)
+    cs.c(chain(cs, tr, ["*~ 0.92"], 450, 860), 0, vac, 1)
+    vg = chain(cs, add(cs, vac, chain(cs, puffi, ["*~ 0.3"], 400, 885), 300, 910), ["clip~ 0 1"], 300, 935)
     # gate filter: two one-poles; cutoff = 70 Hz * 2^(gate*6.2 + Tone*2.4 + timbre) via mtof~;
     # coefficient a = 1 - w (w = 2 pi fc / sr, kept below 0.9)
-    sm = add(e, add(e, chain(e, vg, ["*~ 74.4"], 300, 960), chain(e, k3, ["*~ 28.8"], 400, 960), 300, 985),
-             chain(e, tb, ["*~ 16.8"], 500, 960), 300, 1010)
-    w = chain(e, sm, ["+~ 16.9", "mtof~", f"*~ {6.2832 / SR:.8f}", "clip~ 0.002 0.9"], 300, 1035)
+    w = c.o(c.ex(f"min(0.9, max(0.002, mtof($v1 * 74.4 + $v2 * 28.8 + $v3 * 16.8 + 16.9) * {6.2832 / SR:.8f}))",
+                 [vg, c.i(k3), c.i(tb)]))
+    # VCA side of the gate (gate^1.5): interpolated, it follows the breath closely
+    vca = c.o(c.ex("$v1 * sqrt($v1)", [vg]))
     a_ = chain(e, w, ["*~ -1", "+~ 1"], 450, 1135)
     st = dio
     for i in range(2):
@@ -546,8 +607,8 @@ def feral(path):
         e.c(g, 0, rp, 0)
         e.c(a_, 0, rp, 1)
         st = rp
-    # VCA side of the gate (gate^1.5), DC blocker, out
-    out = mul(e, st, mul(e, vg, chain(e, vg, ["sqrt~"], 260, 975), 200, 1000), 20, 1000)
+    # VCA, DC blocker, out
+    out = mul(e, st, vca, 20, 1000)
     e.c(chain(e, out, ["rzero~ 1", "rpole~ 0.995", "*~ 0.6"], 20, 1025), 0, e.obj("outlet~", 20, 1110), 0)
     e.save(path)
 
@@ -562,7 +623,20 @@ ENGINES = {
 }
 
 
+def more_engines():
+    """the engines in other files: Hybrid and Doom (switchable modes), Frasil and Glint (after FRASIL), Metal, String
+    and Wind (after Jaffedrone)"""
+    import gen_hybrid, gen_frasil, gen_jaffe
+    return {**gen_hybrid.ENGINES, **gen_frasil.ENGINES, **gen_jaffe.ENGINES}
+
+
+def engine_names():
+    """every bundled engine, sorted as on the ENGINE knob"""
+    return sorted(list(ENGINES) + list(more_engines()))
+
+
 def build(out_dir):
+    ENGINES.update(more_engines())
     ed = os.path.join(out_dir, "engines")
     os.makedirs(os.path.join(ed, "lib"), exist_ok=True)
     bsaw(os.path.join(ed, "lib", "bsaw.pd"))

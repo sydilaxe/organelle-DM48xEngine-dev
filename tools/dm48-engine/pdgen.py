@@ -55,6 +55,8 @@ class Canvas:
         return len(self.items) - 1
 
     def c(self, a, ao, b, bi):
+        if isinstance(a, tuple):          # (object, outlet): e.g. one outlet of a subpatch with several
+            a, ao = a
         self.conns.append((a, ao, b, bi))
 
     def chain(self, *idxs):

@@ -1,11 +1,11 @@
 """Audio loop pitch is continuous: +3.5 semitones plays 3.5 st up; turning the knob doesn't click."""
 import sys, numpy as np
-from harness import run, audio, f0
+from harness import run, audio, f0, eng_knob
 SR = 44100
 def key(ev, t, n, h=60): ev += [(t, f"notesRaw {n} 100"), (t + h, f"notesRaw {n} 0")]
 def apitch_test(P, st=3.5):
     v = 0.52 + st * 0.96 / 24
-    ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {1.5 / 7}"),   # Halo
+    ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {eng_knob('halo')}"),   # Halo
           (400, "notesRaw 60 100"), (450, "notesRaw 60 0"), (500, "notesRaw 64 100"), (510, "notesRaw 64 0"),
           (520, "knob3 0.5"), (530, "knob3 0"), (540, "knob4 0.5"), (550, "knob4 0")]                     # dry
     key(ev, 1000, 81)
@@ -27,7 +27,7 @@ def aspeed_test(P, knob=0.75):
     """audio loop speed is continuous: knob -> speed s, the loop's pitch moves by 12*log2(s) (tape)"""
     u = (0.44 - knob) / 0.44
     sp = 2 ** ((knob - 0.56) / 0.44 * 2) if knob > 0.5 else max(0.05, 1 - 3 * u)
-    ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {1.5 / 7}"),
+    ev = [(100, "notesRaw 69 100"), (150, "notesRaw 69 0"), (200, "knob1 0.99"), (300, f"knob1 {eng_knob('halo')}"),
           (400, "notesRaw 60 100"), (450, "notesRaw 60 0"), (500, "notesRaw 64 100"), (510, "notesRaw 64 0"),
           (520, "knob3 0.5"), (530, "knob3 0"), (540, "knob4 0.5"), (550, "knob4 0")]
     key(ev, 1000, 81)

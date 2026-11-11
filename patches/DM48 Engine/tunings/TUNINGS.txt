@@ -270,6 +270,54 @@ World / Double Harmonic E
   blow+slider     E3   F3  Ab3   A3   B3   C4  Eb4   E4   F4  Ab4   A4   B4
   draw+slider     F3  Ab3   A3   B3   C4  Eb4   E4   F4  Ab4   A4   B4   C5
 
+Frasil / Glacier C
+  blow            C2   E2   G2   B2   C3   E3   G3   B3   C4   E4   G4   B4
+  draw            D2   F2   A2   D3   F3   A3   D4   F4   A4   D5   F5   A5
+  blow+slider     C3   E3   G3   B3   C4   E4   G4   B4   C5   E5   G5   B5
+  draw+slider     D3   F3   A3   D4   F4   A4   D5   F5   A5   D6   F6   A6
+
+Frasil / Lydian Haze D
+  blow            D2  Gb2   A2  Db3   D3  Gb3   A3  Db4   D4  Gb4   A4  Db5
+  draw            E2  Ab2   B2   E3  Ab3   B3   E4  Ab4   B4   E5  Ab5   B5
+  blow+slider     D3  Gb3   A3  Db4   D4  Gb4   A4  Db5   D5  Gb5   A5  Db6
+  draw+slider     E3  Ab3   B3   E4  Ab4   B4   E5  Ab5   B5   E6  Ab6   B6
+
+Frasil / Dusk A
+  blow            A2   C3   E3   G3   A3   C4   E4   G4   A4   C5   E5   G5
+  draw            B2   D3  Gb3   B3   D4  Gb4   B4   D5  Gb5   B5   D6  Gb6
+  blow+slider     A3   C4   E4   G4   A4   C5   E5   G5   A5   C6   E6   G6
+  draw+slider     B3   D4  Gb4   B4   D5  Gb5   B5   D6  Gb6   B6   D7  Gb7
+
+Frasil / Aeolian Tide F
+  blow            F2  Ab2   C3  Eb3   F3  Ab3   C4  Eb4   F4  Ab4   C5  Eb5
+  draw            G2  Bb2  Eb3   G3  Bb3  Eb4   G4  Bb4  Eb5   G5  Bb5  Eb6
+  blow+slider     F3  Ab3   C4  Eb4   F4  Ab4   C5  Eb5   F5  Ab5   C6  Eb6
+  draw+slider     G3  Bb3  Eb4   G4  Bb4  Eb5   G5  Bb5  Eb6   G6  Bb6  Eb7
+
+Frasil / Snow Pentatonic G
+  blow            G2   B2   D3   E3   G3   B3   D4   E4   G4   B4   D5   E5
+  draw            A2   D3   E3   A3   D4   E4   A4   D5   E5   A5   D6   E6
+  blow+slider     G3   B3   D4   E4   G4   B4   D5   E5   G5   B5   D6   E6
+  draw+slider     A3   D4   E4   A4   D5   E5   A5   D6   E6   A6   D7   E7
+
+Frasil / Open Fifths E
+  blow            E2  Gb2   B2  Db3   E3  Gb3   B3  Db4   E4  Gb4   B4  Db5
+  draw            G2   A2   D3   G3   A3   D4   G4   A4   D5   G5   A5   D6
+  blow+slider     E3  Gb3   B3  Db4   E4  Gb4   B4  Db5   E5  Gb5   B5  Db6
+  draw+slider     G3   A3   D4   G4   A4   D5   G5   A5   D6   G6   A6   D7
+
+Frasil / Mixolydian Eb
+  blow           Eb2   G2  Bb2   C3  Eb3   G3  Bb3   C4  Eb4   G4  Bb4   C5
+  draw            F2  Ab2  Db3   F3  Ab3  Db4   F4  Ab4  Db5   F5  Ab5  Db6
+  blow+slider    Eb3   G3  Bb3   C4  Eb4   G4  Bb4   C5  Eb5   G5  Bb5   C6
+  draw+slider     F3  Ab3  Db4   F4  Ab4  Db5   F5  Ab5  Db6   F6  Ab6  Db7
+
+Frasil / Harmonics D
+  blow            D2   A2   D3  Gb3   A3   C4   D4   E4  Gb4  Ab4   A4  Bb4
+  draw            A2  Gb3   C4   E4  Ab4  Bb4  Db5  Eb5   F5   G5  Ab5  Bb5
+  blow+slider     D3   A3   D4  Gb4   A4   C5   D5   E5  Gb5  Ab5   A5  Bb5
+  draw+slider     A3  Gb4   C5   E5  Ab5  Bb5  Db6  Eb6   F6   G6  Ab6  Bb6
+
 Order test
   blow            C3  Db3   D3  Eb3   E3   F3  Gb3   G3  Ab3   A3  Bb3   B3
   draw            C4  Db4   D4  Eb4   E4   F4  Gb4   G4  Ab4   A4  Bb4   B4

@@ -37,7 +37,7 @@ PAGES (knobs 1-4)
          Japanese, Chinese, SE-Asian, Maqam, Indian, Byzantine), Key. Scales retune each note.
  ENGINE  Engine, MIDI MPE/Standard, Level, MIDI out (Off / Echo / Echo+Clock); line 4 = MIDI in
  VOICE   Poly / Mono legato, Glide 0-2 s, Glide always / legato only, From nearest (poly glide) / last
- LIBRARY Knob 2 picks a folder (All, Ambient, Chromatic, Richter, World), knob 1 a tuning, Aux sends it (DM48X: Tuning editor > Receive tuning)
+ LIBRARY Knob 2 picks a folder (All, Ambient, Chromatic, Frasil, Richter, World), knob 1 a tuning, Aux sends it (DM48X: Tuning editor > Receive tuning)
 
 SCREEN
  Top strip: [page tabs] [loop bar] [arp dot] [breath meter]
@@ -52,6 +52,15 @@ ENGINES (engines/ folder; add your own - see engines/README.txt)
  velvet lush VA pad       Cutoff Spread Swell Warmth
  steel  pedal steel string Tone Sustain Steel Attack
  lyra   LIRA-8 drone voice Mod Sharp Detune Drive
+ hybrid source x body      Source Body Color Shape
+        Source: Phase Vowel Pulse Breath / Body: Filter Modal Strings Tube (knob quarters)
+ doom   drone + dirt chain Chain Mod Dirt Tone
+        Chain: Rip Tear Metal Flesh (knob quarters); breath pushes clean -> dirty
+ frasil ambient drone       Layers Souffle Motion Timbre   (after FRASIL by Styves Goupil)
+ glint  FM bells            Ratio Bright Decay Ring         (after FRASIL's GLINT; breath = louder, longer)
+ metal  sung metal bodies   Body Bloom Shimmer Tone         (after Jaffedrone; Body: 8 bodies in eighths)
+ string bowed string        Bright Buzz Stiff Sustain       (after Jaffedrone; jawari buzz)
+ wind   reeds               Reed Bright Air Vibrato         (after Jaffedrone; Reed: single, double, free)
 
 Steel is after Steelie by gur_shulman (WTFPL); Lyra is after LIRA-8 by Miguel Moreno (BSD licence).
 

@@ -38,6 +38,12 @@ This is the working memory for this project: read it first in any new session.
   - `bob~` at oversample 1 is unstable above about 8 kHz.
   - A `delwrite~`/`vd~` feedback loop can't be shorter than one block (64 samples); use `block~ 16` for short loops.
 - **CPU: avoid per-sample `expr~`** in anything that always runs. The FX, the audio looper and Feral use native objects only (`+~ -~ *~ /~ max~ min~ abs~ clip~ wrap~ mtof~`); that cut 8 Feral voices + overdub from 5.8 % to 3.6 % of an x86 core. Overdub "fuzz" on the Organelle was CPU overload (offline renders were clean). The engines' `ex()` formulas are compiled to native objects at build time by `tools/dm48-engine/sigexpr.py` (+ - * /, min, max, abs, fmod(x,1), pow, exp, sqrt, mtof; constants folded; falls back to expr~ otherwise; `NO_SIGEXPR=1` builds the old way). Renders match the expr~ build to 108-177 dB. Glitches when overdubbing with the loop pitched down were CPU (offline clean); the pitch shifter adds ~10 %.
+- **CPU, round 2 (per-object costs and a 1/8-rate control block):** measured per object on x86 (64-sample blocks): `*~ +~ -~ /~ min~ line~` ≈ 0.4 ns/sample, `clip~` 0.7, `phasor~ noise~ wrap~ lop~ rpole~` 1.4-1.8, `osc~ cos~ sqrt~` 2, `exp~` 3.6, `vcf~` 5.7, `mtof~` 6.6, `pow~` 8.3. A `[block~ 8 1 0.125]` subpatch's `outlet~ lin` costs 3.9, `outlet~ hold` 1.2 (inlet~ is ~free).
+  - Engines compute their costly slow signals in a `pd ctl` subpatch at sr/8 (`Ctl` in `gen_engines.py`): pitch → Hz (with drift/wander), saw rates, Halo's partial `pow~` amplitudes, Volt's and Velvet's cutoffs, Feral's puff detector / wander / vactrol / gate cutoff / VCA. **Only oscillator frequencies may leave through `outlet~ hold` (`c.f()`)**: a held (stepped) amplitude, drive or cutoff crackles when breath moves fast, and it gets recorded into the audio loop (reported on the Organelle as crackly overdubs; offline `t_clicks`-style detection shows it in Velvet). Everything else leaves through `outlet~ lin` (`c.o()`), which costs ~10 `*~`, so cheap formulas stay at full rate and VCA envelopes stay a full-rate `lop~`. Steel stays fully at full rate (nearly all its signals feed the string). One-pole coefficients inside are a^8 and differentiators ×1/8 (same time constants); noise~ into a slow lowpass is ×1/√8. No `r~` inside (block size must match its `s~`). Never feed a ctl output back into the same ctl (DSP loop).
+  - `lib/bsaw`: the old naive saw + step cancelled out; removed (4 fewer objects, identical output). Dropping the wrap~ too (u = phase - 0.5) gives the same waveform half a cycle later, but changes how detuned saws line up, so it was kept.
+  - Audio looper: each layer is its own `switch~` subpatch, on while its gain target is not 0 (off 100 ms after a fade to 0), out via `outlet~` (a switched-off outlet~ gives zeros). Not throw~/catch~: Pd sorts a catch~ before the throw~s, which delayed the loop by one block. Pitch shifter: the two taps' delay and window are shared by L and R. Output is bit-identical to before, except clear: its fade is now really 20 ms (the old `[$1 60(` turned "0 20" into a 60 ms fade, cut off when the looper DSP stopped at 40 ms).
+  - Stress (`t_stress.py`: 8 voices with moving breath, a MIDI loop, an audio overdub pitch-shifted down; x86 % incl. FX 0.94): Under 2.1, Glint 2.4, Lyra 2.4, Hybrid 2.6, String 2.7, Volt 2.7, Feral 2.9, Velvet 3.1, Steel 3.1, Wind 3.1, Doom 3.2, Metal 3.3, Halo 3.3, Frasil 3.8. No clipping; its click detections (at the MIDI loop's chord re-attack and the audio loop seam) are the same, at the same times, in the build before this work.
+  - Result (x86, % of one core above the idle FX, 8 voices, best of 3): Feral 2.07 → 1.61, Halo 2.92 → 1.73, Lyra 1.31 → 1.02, Steel 1.89 (unchanged), Under 1.00 → 0.75, Velvet 2.04 → 1.74, Volt 1.49 → 1.40. Audio looper: 1 layer 0.22 → 0.14, 3 layers 0.25 → 0.24, pitch-shifted 0.45 → 0.32, overdub 0.27 → 0.15.
 - **Measuring CPU offline:** child CPU time (`resource.getrusage`) of a 100 s run minus a 10 s run (cancels start-up and the 95 MB looper allocation); wall-clock timing is too noisy.
 - **`expr`:**
   - No `wrap()`; use `fmod(x + 4, 1)`.
@@ -51,7 +57,7 @@ This is the working memory for this project: read it first in any new session.
 - A tuning is 48 notes in this order: blow 1-12, draw 1-12, blow+slider 1-12, draw+slider 1-12. In the firmware the table is at 0xAB28.
 - Send/Receive tuning: the notes go as plain MIDI notes, recorded or played as a `.mid` file. All files in `tunings/` are format 0, channel 1, with 48 note-on/off pairs.
 - The DM48X only stores note numbers. Just intonation and other microtuning are done in the synth (TUNE page scale + Key).
-- Included tunings (`make_scales.py`, 46 + Order test) sit in folders (Ambient, Chromatic, Richter, World); LIBRARY knob 2 picks the folder (0 = All). Richter Low in all 12 keys (key note G2-F#3, slider +1 octave), Country, Paddy Richter, Harmonic Minor, Chromatic (slider = +1 semitone: Solo C/G, Low C, Augmented, Diminished), Ambient and World scales.
+- Included tunings (`make_scales.py`, 54 + Order test) sit in folders (Ambient, Chromatic, Frasil, Richter, World); LIBRARY knob 2 picks the folder (0 = All). Richter Low in all 12 keys (key note G2-F#3, slider +1 octave), Country, Paddy Richter, Harmonic Minor, Chromatic (slider = +1 semitone: Solo C/G, Low C, Augmented, Diminished), Ambient and World scales.
 - In DM48 Engine, a tuning whose name ends in a key ("Richter Low D") also sets the TUNE Key when sent.
 - While a tuning is being sent, DM48X input is ignored, plus 0.6 s afterwards. This fixed a reported "pop".
 
@@ -97,38 +103,35 @@ This is the working memory for this project: read it first in any new session.
   - The engine gets "source 0" then "pitch ms". A bend during a glide uses the remaining glide time.
   - VOICE values are saved after the engine name in settings.txt (`SAVED_TAIL`), so older settings files still load.
 - **Feral** (built from scratch, no shared parts): capacitor-charge osc (ramp blended with a sin quarter by breath²) with poly-BLEP, hard-synced slave (wrap~(phase × ratio)), half-rate square sub, puff detector (rzero~ differentiator → rpole~ hold), vactrol LPG (max~ of breath and a slow rpole~ tail; one-poles with a = 1 − w), asymmetric diode clipper. No expr~ at all: per-sample expr~ is slow, so the first version (25 expr~) cost 2.5× the other engines.
+- **Hybrid / Doom** (`gen_hybrid.py`): modes are `switch~` subpatches picked by a control knob (`modes()`: int(v × n)); selecting fades in 10 ms, deselecting fades out and switches off 20 ms later. A mode's `delwrite~`s, and the Strings body's filters, are cleared when it is switched on (`[s $0-on-<mode>]`), else old contents ring out as a click; Strings is fed through a 30 ms ramp so the combs build up. Per-mode level trims (`gains=`) keep all 16 Hybrid combinations within ~2.5 dB. Knob changes made right after an engine switch are overwritten when the engine restores its saved knobs (tests wait ~1 s). Test engine knob positions with `harness.eng_knob(name)` / `ENGINE_NAMES`, never a hard-coded count.
+- **Frasil / Glint** (`gen_frasil.py`, after FRASIL, MPL-2.0: reimplemented from its design, no code copied). They keep FRASIL's response to pressure (breath): Frasil's choir cutoff +0.5 x pressure through a one-pole, its partials' tilt; Glint is FRASIL's struck bell, pressure = gain 1 + 1.5 x and a longer ring, its tone unchanged. ("Harder breath adds harmonics" is for the Jaffedrone engines only.) Frasil's three layers are `switched()` subpatches, each with its own Ctl block, so a layer turned down costs nothing; drifts are slow `osc~`s (a Ctl object costs as much as a full-rate one: keep Ctl blocks small - Frasil's first version had 272 objects there and cost 4 %).
+- **Metal / String / Wind** (`gen_jaffe.py`, ported from Jaffedrone, MIT). No plucks or strikes: breath is the rub, the bow or the mouth, and harder breath adds harmonics (checked: >4th-harmonic energy rises 12-50 dB from soft to hard breath, except the reeds, which brighten ~4 dB and get louder 6 dB). A reed model speaks at one strength above its threshold, so Wind keeps the pressure in the speaking range while there is breath (as Jaffedrone's base pressure does), lets breath open the bore's wall filter, and adds a breath-following level. The double reed needs a DC blocker in its loop (Jaffedrone's has none but its ear correction). Waveguides run in `block~ 16` subpatches (delays down to 0.37 ms).
+- **Frasil tunings** (`make_scales.py` `chord_walk`): blow = one chord, draw = a second chord, plain holes the lower octave, slider +12.
 - **Steel** has no pluck: breath is the bow. Knob 4 Attack = minimum rise time of the breath level (5 ms – 2 s).
 - **Voice allocation:** one voice per key. A repeated note-on first releases the key, and orphan note-offs are dropped (`engkeyon`). This fixed stuck notes after clearing the looper.
 - **Loudness:** engines are level-matched within about 1.5 dB (`t_loud.py`).
 - **Settings:** defaults are used only when `settings.txt` is missing. The harness resets settings before each test run, because auto-save writes into the patch folder.
 - **Knob pickup:** the continuous knobs move relative to their current value (the `REL_CUR` table in `sec_ui.py`). Selector knobs jump.
 - **Reverb:** 8-line Hadamard FDN with 4 input diffusers, modulated `delread4~` lines, two-band damping (bass decays 1.3× longer) and freeze.
-- **CPU** (offline x86 benchmark, 8 voices sounding): engines use 2.8-6.3 % of one core. The CM3 is roughly 8-10× slower.
+- **CPU** (offline x86 benchmark, 8 voices sounding): engines use 0.75-1.9 % of one core above the FX (see CPU round 2). The CM3 is roughly 8-10× slower.
 
 ## What we learned from reference patches (ideas only, not code)
 | Source | Idea | Status |
 |---|---|---|
 | VerbRack | 8-line FDN reverb, knob pickup modes, auto-save | done |
-| SuperSynth | each oscillator shape in its own `switch~` subpatch | used in Hybrid (WIP) |
-| vcs.cc (CC BY-NC-SA) | pitch-dependent caps on folding and drive (anti-alias), STK reed, sr/8 control block, CZ phase distortion | caps done; CZ in Hybrid |
+| SuperSynth | each oscillator shape in its own `switch~` subpatch | used in Hybrid and Doom |
+| vcs.cc (CC BY-NC-SA) | pitch-dependent caps on folding and drive (anti-alias), STK reed, sr/8 control block, CZ phase distortion | caps done; CZ in Hybrid; sr/8 control block in all engines |
 | KnightSky | soft limiter inside the feedback loop, re-pitched freeze, exciter, OLED dirty-row redraw | ideas |
 | Big Bottom (WTFPL) | wavetable band-limited saws, shared modulation bus, drift | ideas |
 | Wave Folds | `pd~` for multi-core voices, crossfaded mode switches | ideas |
-| DOOM_SYNTH (BSD + Commons Clause) | breath-ducked dirty parallel chains, rational tanh, pitched noise grit, spring reverb | planned: Doom × Lyra hybrid |
-| Elements / Rings / Braids / Clouds (MI ports, externals) | modal tuning f·n·(1+g·n²), sympathetic strings, vowel formants, Clouds-lite granular | in Hybrid / roadmap |
+| DOOM_SYNTH (BSD + Commons Clause) | breath-ducked dirty parallel chains, rational tanh, pitched noise grit, spring reverb | done: Doom engine |
+| Elements / Rings / Braids / Clouds (MI ports, externals) | modal tuning f·n·(1+g·n²), sympathetic strings, vowel formants, Clouds-lite granular | modal, strings, vowel in Hybrid; Clouds-lite on the roadmap |
 | Juno-104, NESWave, DUST, Mellotron, PLAY | delayed vibrato, PWM sub, tape wow, breath-gated tape | ideas |
 
 ## Roadmap
-1. **Hybrid engine** (`tools/dm48-engine/gen_hybrid.py`, WIP). Two mode knobs:
-   - SOURCE: CZ Phase, Vowel formant, Juno Pulse+sub, Breath noise.
-   - BODY: Filter, Modal (Elements), Sympathetic Strings (Rings), Tube.
-   - Each mode is its own `switch~` subpatch.
-   - Knob 3 is Color (source) and knob 4 is Shape (body).
-2. **Doom × Lyra hybrid:**
-   - Lyra's cross-modulated triangles feed DOOM-style chains (RIP dist/bitcrush, TEAR phaser, METAL spring, FLESH feedback distortion), as `switch~` modes.
-   - Breath moves from clean to dirty, ducked as in DOOM's sidecomp.
-3. **Ideas to evaluate:**
+1. **Hybrid** and **Doom** engines: done (`gen_hybrid.py`).
+2. **Ideas to evaluate:**
    - Clouds-lite granular master stage, breath-driven.
    - A sympathetic-strings bus.
    - OLED dirty-row redraw.
-4. **Test on the real hardware:** MIDI out, clock, CPU and the speaker pop.
+3. **Test on the real hardware:** MIDI out, clock, CPU and the speaker pop.

@@ -107,6 +107,33 @@ T["World/Hirajoshi E"] = walk(40, [2, 1, 4, 1, 4])
 T["World/Pelog C"] = walk(48, [1, 2, 4, 1, 4])
 T["World/Slendro C"] = walk(48, [2, 3, 2, 2, 3])
 T["World/Double Harmonic E"] = walk(40, [1, 3, 1, 2, 1, 3, 1])
+# --- Frasil: drone tunings for ambient playing (after FRASIL's chords-in-a-key idea). Blow holes walk one chord, draw
+# holes a second chord that sits well with it, so any holes you breathe together sound consonant. The plain holes are
+# the lower octave; the slider jumps the same layout up an octave. The name ends in the key (sets the TUNE Key).
+def chord_walk(root, blow_pcs, draw_pcs):
+    """blow: 12 notes up from root on the pitch classes blow_pcs (relative to root); draw: 12 notes up on draw_pcs,
+    from the first one above root, so hole by hole each draw note sits just above its blow note. Slider: +1 octave"""
+    def run(start, pcs):
+        out, n = [], start
+        while len(out) < 12:
+            if (n - root) % 12 in pcs:
+                out.append(n)
+            n += 1
+        return out
+    b = run(root, blow_pcs)
+    d = run(root + 1, draw_pcs)
+    return [b, d, up(b, 12), up(d, 12)]
+T["Frasil/Glacier C"] = chord_walk(36, {0, 4, 7, 11}, {2, 5, 9})          # Cmaj7 / Dm: Ionian, bright and still
+T["Frasil/Lydian Haze D"] = chord_walk(38, {0, 4, 7, 11}, {2, 6, 9})      # Dmaj7 / E: Lydian's raised 4th, floating
+T["Frasil/Dusk A"] = chord_walk(45, {0, 3, 7, 10}, {2, 5, 9})             # Am7 / Bm: Dorian, warm minor
+T["Frasil/Aeolian Tide F"] = chord_walk(41, {0, 3, 7, 10}, {2, 5, 10})    # Fm7 / Eb: Aeolian, dark and calm
+T["Frasil/Snow Pentatonic G"] = chord_walk(43, {0, 4, 7, 9}, {2, 7, 9})   # G6 / A-D-E: major pentatonic, no clashes
+T["Frasil/Open Fifths E"] = chord_walk(40, {0, 7, 2, 9}, {5, 10, 3})      # E-B-F#-C# fifths / A-D-G fourths
+T["Frasil/Mixolydian Eb"] = chord_walk(39, {0, 4, 7, 9}, {10, 2, 5})      # Eb6 / Db: the soft bVII
+hd = lambda h: 26 + round(12 * math.log2(h))                              # harmonics of D1 (draw: the odd ones)
+T["Frasil/Harmonics D"] = [[hd(h) for h in range(2, 14)], [hd(h) for h in range(3, 27, 2)],
+                           [hd(h) + 12 for h in range(2, 14)], [hd(h) + 12 for h in range(3, 27, 2)]]
+
 # --- check file: every slot different and easy to read in the Tuning editor
 T["Order test"] = [list(range(48, 60)), list(range(60, 72)), list(range(72, 84)), list(range(84, 96))]
 
