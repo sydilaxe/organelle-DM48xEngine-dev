@@ -250,7 +250,7 @@ shows messages when you press a key or turn a combo. The top strip is always vis
 <h3>SHAPE — breath and envelope</h3>
 {page_table([("1", "Breath&gt;Tone", "How much breath changes the timbre (all engines). 0 = breath only changes volume."),
              ("2", "Body", "A sine one octave below every note."),
-             ("3", "Release", "Fade after a note ends (10 ms – 3 s)."),
+             ("3", "Release", "How long the sound takes to fade out when your breath stops or the note ends: a full-level note fades in 10 ms – 3 s. A breath that falls slower than this is followed as is; a long Release also smooths quick breath dips."),
              ("4", "Breath Curve", "0.5 = easy to get loud · 1 = linear · 3 = needs strong breath.")])}
 <h3>FX</h3>
 {page_table([("1", "Delay", "20 – 1500 ms. Tap tempo sets it too."),
