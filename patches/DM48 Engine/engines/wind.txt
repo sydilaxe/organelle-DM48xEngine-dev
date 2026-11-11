@@ -1,0 +1,2 @@
+Reed Bright Air Vibrato;
+0.15 0.5 0.3 0.2;

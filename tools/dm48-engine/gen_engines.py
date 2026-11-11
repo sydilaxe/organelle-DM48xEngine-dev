@@ -624,9 +624,10 @@ ENGINES = {
 
 
 def more_engines():
-    """the engines in other files: Hybrid and Doom (switchable modes), Frasil and Glint (after FRASIL)"""
-    import gen_hybrid, gen_frasil
-    return {**gen_hybrid.ENGINES, **gen_frasil.ENGINES}
+    """the engines in other files: Hybrid and Doom (switchable modes), Frasil and Glint (after FRASIL), Metal, String
+    and Wind (after Jaffedrone)"""
+    import gen_hybrid, gen_frasil, gen_jaffe
+    return {**gen_hybrid.ENGINES, **gen_frasil.ENGINES, **gen_jaffe.ENGINES}
 
 
 def engine_names():
