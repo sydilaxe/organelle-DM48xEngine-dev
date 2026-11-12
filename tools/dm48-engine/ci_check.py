@@ -106,6 +106,13 @@ run(P, ev)
 x = audio(P).mean(1)
 check("no stuck notes after looper clear", rms(x, 5.0, 5.5) < 0.002, f"rms at 5 s {rms(x, 5.0, 5.5):.4f}")
 
+# 3b. clearing the MIDI looper silences loop notes that are still on (first take and an overdub layer)
+ev = [(500, "eng-proc 0 18 60 100"), (510, "eng-proc 0 35 64 100"), (1300, "eng-loop-clear bang"), (5000, "knob1 0.3")]
+run(P, ev)
+x = audio(P).mean(1)
+check("MIDI looper clear silences held loop notes", rms(x, 0.9, 1.2) > 0.02 and rms(x, 4.0, 4.5) < 0.002,
+      f"rms at 4 s {rms(x, 4.0, 4.5):.4f}")
+
 # 4. switching engines while playing: a short fade (no gap, no click), held notes keep sounding
 ev = [(300, "eng-in 0 2 57 100"), (301, "eng-in 4 2 11 100"), (500, "notesRaw 69 100"), (550, "notesRaw 69 0"),
       (600, "knob1 0.79")]
@@ -194,6 +201,16 @@ for post in (False, True):
     play, after, _ = aclear_test(P, post)
     check(f"audio loop clear is silent ({'Post' if post else 'Pre'})", play > 0.02 and after < 0.001,
           f"playing {play:.3f} after clear {after:.4f}")
+
+# 9b. audio loop decay: off at the left; at the right the loop fades smoothly to silence within a few passes
+from t_adecay import adecay_test
+lv0, _ = adecay_test(P, 0.0)
+lv1, _ = adecay_test(P, 1.0)
+steps = [b / a for a, b in zip(lv1[2:16], lv1[3:17]) if a > 0.004]
+p0, p5 = np.mean(lv0[0:4]), np.mean(lv0[20:24])        # whole 1 s passes, 5 s apart
+check("audio loop decay off keeps the level", abs(p5 / p0 - 1) < 0.05, f"{p0:.3f} -> {p5:.3f}")
+check("audio loop decay fades smoothly to silence", lv1[-1] < 0.001 and min(steps) > 0.4,
+      f"end {lv1[-1]:.4f}, steepest 0.25 s step x{min(steps):.2f}")
 
 # 10. audio loop pitch is continuous (+3.5 semitones)
 from t_apitch import apitch_test

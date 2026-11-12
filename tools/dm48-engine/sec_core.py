@@ -250,7 +250,7 @@ def combos():
     akr = to(cb, akt, "route 1 2 3 4", 1100, 300)
     for k in range(4):
         to(cb, akr, f"s $0-k{k + 1}p8", 1100 + k * 80, 350, outlet=k)
-    # high A (audio looper): knob 1 speed/direction, 2 pitch, 3 level, 4 layer fade
+    # high A (audio looper): knob 1 speed/direction, 2 pitch, 3 level, 4 loop decay
     lk = chain(cb, vals[7], ["expr engcombok; $f1"], 20, 550)
     lkp = cb.obj("pack 0 0", 20, 575)
     cb.c(lk, 1, lkp, 1)
@@ -274,11 +274,12 @@ def combos():
     alv = chain(cb, lkr, ["t f f"], 450, 625, outlet=2)
     to(cb, alv, "s eng-aloop-level", 550, 650, outlet=1)
     to(cb, msg_to(cb, to(cb, alv, "expr int($f1 * 100)", 450, 650), "list Audio level $1", 450, 675), "s $0-toast", 450, 700)
-    afd = chain(cb, lkr, ["expr if($f1 > 0.97, 1, 0.5 + $f1 * 0.5)", "t f f"], 650, 625, outlet=3)
+    # loop decay: left = off, then each pass keeps 99.6 % (very slow) .. 30 % (quick) of the older layers' level
+    afd = chain(cb, lkr, ["expr if($f1 < 0.03, 1, 1 - 0.7 * pow($f1, 1.5))", "t f f"], 650, 625, outlet=3)
     to(cb, afd, "s eng-aloop-fade", 750, 675, outlet=1)
-    afs = chain(cb, afd, ["expr int((1 - $f1) * 100)", "sel 0"], 650, 675)
-    to(cb, msg_to(cb, afs, "list Layer fade off", 650, 725), "s $0-toast", 650, 750)
-    to(cb, msg_to(cb, afs, "list Layer fade $1", 760, 725, outlet=1), "s $0-toast", 760, 750)
+    afs = chain(cb, afd, ["expr if($f1 >= 1, 0, max(1, int((1 - $f1) * 100 + 0.5)))", "sel 0"], 650, 675)
+    to(cb, msg_to(cb, afs, "list Loop decay off", 650, 725), "s $0-toast", 650, 750)
+    to(cb, msg_to(cb, afs, "list Loop decay -$1% a pass", 760, 725, outlet=1), "s $0-toast", 760, 750)
     # high B (audio looper): any knob = record Pre / Post the effects
     pp = chain(cb, vals[8], ["> 0.5", "change", "t f f"], 900, 550)
     to(cb, pp, "s eng-aloop-post", 1000, 600, outlet=1)

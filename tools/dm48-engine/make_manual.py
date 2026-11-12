@@ -226,7 +226,7 @@ Left = reverse, faster the further you turn (up to 4×). The MIDI clock follows.
 <tr><td>E (wet)</td><td>any knob</td><td>Reverb amount</td></tr>
 <tr><td>F (tap)</td><td>any knob</td><td>Tempo 40–200 BPM</td></tr>
 <tr><td>F♯ (arp)</td><td>knob 1 / 2 / 3 / 4</td><td>The ARP page knobs: rate / pattern / octaves / gate (shows the ARP page)</td></tr>
-<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style, continuous) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>layer fade</b></td></tr>
+<tr><td>A (high, audio loop)</td><td>knob 1 / 2 / 3 / 4</td><td>Audio loop <b>speed &amp; direction</b> (tape style, continuous) / <b>pitch</b> −12…+12 semitones, continuous (not in steps; a small dead zone at the centre is exactly 0) / <b>level</b> / <b>loop decay</b></td></tr>
 <tr><td>B (high, audio loop)</td><td>any knob</td><td>Record <b>Pre</b> (left) or <b>Post</b> (right) effects</td></tr></table>
 <p><b>Aux button</b> and <b>footswitch</b> run the looper (§7). On the LIBRARY page, Aux sends a tuning instead; the footswitch still runs the looper.</p>
 
@@ -330,7 +330,7 @@ layer different engines: record a pass with Halo, switch to Steel, overdub, and 
 <tr><td>Clear</td><td>Hold high A for 1 s.</td></tr>
 <tr><td>Speed &amp; direction</td><td>Hold high A + knob 1: varispeed like tape, continuous, pitch follows speed. Centre = 1×; right speeds up to 4×; left slows down (0.5× is an octave down) to a near-stop about a third of the way, then plays backwards, up to −1× at full left.</td></tr>
 <tr><td>Pitch</td><td>Hold high A + knob 2: −12…+12 semitones, speed unchanged.</td></tr>
-<tr><td>Level / layer fade</td><td>Hold high A + knob 3 / knob 4. Layer fade makes older layers fade a little each pass (off at the right end).</td></tr>
+<tr><td>Level / loop decay</td><td>Hold high A + knob 3 / knob 4. Loop decay works like the feedback of a tape looper: each pass the older layers get quieter (the sound itself is not degraded), smoothly rather than in steps. Off at the left end; turning right fades faster, up to −70 % a pass at the right end (gone in about six passes). A layer that has faded out frees its slot for a new overdub. The layer being overdubbed doesn't fade until the overdub ends.</td></tr>
 <tr><td>Pre / Post</td><td>Hold high B + a knob. <b>Pre</b> records the synth before the effects; the loop then goes through the delay and reverb you set now.
 <b>Post</b> records the finished sound with its effects.</td></tr></table>
 <p><b>Overdub at any speed, like tape.</b> Each layer remembers the speed (and direction) it was recorded at. Overdub at 2× and then
