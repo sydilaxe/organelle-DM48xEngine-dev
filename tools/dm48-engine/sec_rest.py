@@ -397,6 +397,141 @@ def smooth(c, recv, ms, x, y, scale=None):
     return to(c, msg_to(c, last, f"$1 {ms}", x, y + 25 + 25 * len(objs)), "line~", x, y + 50 + 25 * len(objs))
 
 
+# ---- freeze: up to 6 stacked layers. A tap captures the next 0.75 s of the sound (dry + delay) into a free
+# buffer, then plays it back as an endless granular "hold": two 250 ms grains a layer, Hann windows at 50 %
+# overlap (they sum to 1), each grain from a random place in the capture. The 7th tap fades out the oldest layer
+# (7 buffers rotate, so the new one never overwrites a layer that is still sounding). A long hold fades all out.
+# Every layer is its own subpatch that runs only while its gain is not 0: no layers, no CPU.
+NFZ = 7
+FZ_CAP = 33075        # 0.75 s at 44.1 kHz
+FZ_GRAIN = 11025      # 250 ms
+FZ_GAIN = 0.6
+
+
+def freeze_arrays():
+    return [(f"engfz{j}", FZ_CAP + 1000) for j in range(NFZ)]
+
+
+def freeze():
+    f = Canvas("freeze", w=1600, h=900)
+    f.comment("Freeze: tap = capture 0.75 s into a new layer (up to 6, the 7th fades the oldest), hold = all off", 20, 5)
+    fin = f.obj("inlet~", 20, 30)
+    # writer: only runs while capturing
+    w = Canvas("frz-writer", w=400, h=200)
+    tw = to(w, w.obj("inlet~", 20, 20), "tabwrite~ engfz0", 20, 60)
+    w.c(w.obj("r $0-fzw", 150, 30), 0, tw, 0)
+    w.c(w.obj("r $0-fzwon", 250, 30), 0, w.obj("switch~", 250, 60), 0)
+    f.c(fin, 0, f.sub(w, 20, 60), 0)
+    # one grain clock for all layers (two 250 ms grains, Hann windows at 50 % overlap, a random start each):
+    # every layer only reads its own buffer with it
+    ph = f.obj("phasor~ 4", 400, 30)
+    clk = []
+    for r in (0, 1):
+        x = 400 + r * 400
+        p = ph if r == 0 else chain(f, ph, ["+~ 0.5", "wrap~"], x, 55)
+        nz = chain(f, f.obj("noise~", x + 150, 30), ["*~ 0.5", "+~ 0.5"], x + 150, 55)
+        sh = f.obj("samphold~", x + 150, 110)                   # new random start at each grain start
+        f.c(nz, 0, sh, 0)
+        f.c(p, 0, sh, 1)
+        off = chain(f, sh, [f"*~ {FZ_CAP - FZ_GRAIN - 8}", "+~ 4"], x + 150, 135)
+        idx = f.obj("+~", x, 185)
+        f.c(to(f, p, f"*~ {FZ_GRAIN}", x, 160), 0, idx, 0)
+        f.c(off, 0, idx, 1)
+        win = chain(f, p, ["cos~", "*~ -0.5", "+~ 0.5"], x + 100, 185)
+        clk.append((idx, win))
+    out = None
+    for j in range(NFZ):
+        ly = Canvas(f"frz{j}", w=700, h=300)
+        ly.comment("one freeze layer: runs only while its gain is not 0", 20, 5)
+        grains = []
+        for r in (0, 1):
+            x = 20 + r * 200
+            rd = to(ly, ly.obj("inlet~", x, 30), f"tabread~ engfz{j}", x, 60)
+            g_ = ly.obj("*~", x, 90)
+            ly.c(rd, 0, g_, 0)
+            ly.c(ly.obj("inlet~", x + 100, 30), 0, g_, 1)
+            grains.append(g_)
+        sm_ = ly.obj("+~", 20, 120)
+        ly.c(grains[0], 0, sm_, 0)
+        ly.c(grains[1], 0, sm_, 1)
+        gt = chain(ly, ly.obj(f"r $0-fg{j}", 450, 30), ["t a a"], 450, 55)      # "gain ms"
+        gl = to(ly, gt, "line~", 450, 85)
+        gm = ly.obj("*~", 20, 150)
+        ly.c(sm_, 0, gm, 0)
+        ly.c(gl, 0, gm, 1)
+        ly.c(gm, 0, ly.obj("outlet~", 20, 180), 0)
+        sw = ly.obj("switch~", 550, 260)
+        gu = to(ly, gt, "unpack 0 0", 550, 85, outlet=1)
+        off_ = ly.obj("delay", 550, 160)
+        ly.c(to(ly, gu, "+ 50", 610, 110, outlet=1), 0, off_, 1)          # switch off once the fade is done
+        gz = to(ly, gu, "sel 0", 550, 110)
+        ly.c(gz, 0, off_, 0)
+        ly.c(msg_to(ly, off_, "0", 550, 185), 0, sw, 0)
+        on = to(ly, gz, "t b b", 650, 135, outlet=1)
+        ly.c(msg_to(ly, on, "stop", 700, 160, outlet=1), 0, off_, 0)
+        ly.c(msg_to(ly, on, "1", 650, 185), 0, sw, 0)
+        lb = f.sub(ly, 20 + j * 110, 250)
+        for r in (0, 1):
+            f.c(clk[r][0], 0, lb, r * 2)
+            f.c(clk[r][1], 0, lb, r * 2 + 1)
+        out = lb if out is None else add(f, out, lb, 20 + j * 110, 280)
+    # the whole freeze runs only while it is used: on at a tap, off once everything has faded out
+    fsw = f.obj("switch~", 1300, 120)
+    f.c(msg_to(f, f.obj("r $0-fzon", 1300, 70), "1", 1300, 95), 0, fsw, 0)
+    foff = f.obj("delay", 1400, 95)
+    f.c(msg_to(f, foff, "0", 1400, 120), 0, fsw, 0)
+    f.c(f.obj("r $0-fzoff", 1400, 70), 0, foff, 0)
+    f.c(msg_to(f, f.obj("r $0-fzon", 1500, 70), "stop", 1500, 95), 0, foff, 0)
+    f.c(out, 0, f.obj("outlet~", 20, 320), 0)
+    # gains: [s $0-fgset] "layer gain ms"
+    gr = to(f, f.obj("r $0-fgset", 20, 250), "route " + " ".join(str(j) for j in range(NFZ)), 20, 275)
+    for j in range(NFZ):
+        to(f, gr, f"s $0-fg{j}", 20 + j * 70, 300, outlet=j)
+    fg = f.obj("s $0-fgset", 600, 600)
+    toast = f.obj("s $0-toast", 900, 600)
+    # tap (ignored while a capture is running)
+    tp = f.obj("spigot 1", 20, 350)
+    f.c(f.obj("r eng-frz-tap", 20, 325), 0, tp, 0)
+    tt = to(f, tp, "t b b b b b", 20, 375)
+    send_on = f.obj("s $0-fzon", 1100, 425)
+    f.c(tt, 4, send_on, 0)
+    capdone = f.obj("delay 760", 20, 500)
+    # 4: the oldest of 6 sounding layers fades out; the slot about to be written goes silent (normally it is)
+    ox = to(f, tt, f"expr if(engfzk >= 6, (engfzk - 6) % {NFZ}, -1); engfzk % {NFZ}", 400, 400, outlet=4)
+    f.c(msg_to(f, to(f, ox, "moses 0", 400, 425), "$1 0 1500", 400, 450, outlet=1), 0, fg, 0)
+    f.c(msg_to(f, ox, "$1 0 5", 550, 425, outlet=1), 0, fg, 0)
+    # 3: the writer points at the slot and starts
+    sl = to(f, tt, f"expr engfzk % {NFZ}", 650, 400, outlet=3)
+    to(f, sl, "v engfzs", 750, 425)
+    send_ = f.obj("s $0-fzw", 650, 475)
+    f.c(msg_to(f, sl, "set engfz$1", 650, 425), 0, send_, 0)
+    to(f, msg_to(f, tt, "1", 850, 400, outlet=2), "s $0-fzwon", 850, 425)
+    f.c(msg_to(f, tt, "bang", 650, 450, outlet=1), 0, send_, 0)
+    f.c(msg_to(f, tt, "0", 950, 400, outlet=1), 0, tp, 1)                 # capturing
+    # 0: count, toast, wait for the capture
+    ct = chain(f, tt, ["expr engfzk + 1", "t f f"], 20, 400)
+    to(f, ct, "v engfzk", 120, 450, outlet=1)
+    f.c(msg_to(f, to(f, ct, "min 6", 20, 425), "list Freeze $1 of 6", 20, 450), 0, toast, 0)
+    f.c(tt, 0, capdone, 0)
+    cd = to(f, capdone, "t b b b", 20, 525)
+    f.c(msg_to(f, cd, "1", 150, 550, outlet=2), 0, tp, 1)
+    to(f, msg_to(f, cd, "0", 100, 550, outlet=1), "s $0-fzwon", 100, 575)
+    f.c(msg_to(f, to(f, cd, "expr engfzs", 20, 550), f"$1 {FZ_GAIN} 300", 20, 575), 0, fg, 0)
+    # all off: [r eng-frz-off] (fade 2 s, toast) and panic (at once)
+    for rc, ms, x in (("eng-frz-off", 2000, 20), ("eng-panic", 20, 400)):
+        ft = to(f, f.obj(f"r {rc}", x, 650), "t b b b b", x, 675)
+        for j in range(NFZ):
+            f.c(msg_to(f, ft, f"{j} 0 {ms}", x + j * 50, 700, outlet=3), 0, fg, 0)
+        f.c(msg_to(f, ft, "stop", x, 725, outlet=2), 0, capdone, 0)
+        to(f, msg_to(f, ft, "0", x + 60, 725, outlet=2), "s $0-fzwon", x + 60, 750)
+        f.c(msg_to(f, ft, "1", x + 120, 725, outlet=1), 0, tp, 1)
+        setv(f, ft, "engfzk", 0, x + 180, 725, outlet=1)
+        to(f, msg_to(f, ft, str(ms + 150), x + 300, 725, outlet=1), "s $0-fzoff", x + 300, 750)
+        if rc == "eng-frz-off":
+            f.c(msg_to(f, ft, "list Freeze off", x + 240, 725, outlet=0), 0, toast, 0)
+    return f
+
+
 def audio():
     a = Canvas("audio-fx", w=1800, h=1400)
     a.comment("Engine params -> signals, vibrato, then master FX: ping-pong delay, reverb (with freeze), limiter", 20, 5)
@@ -458,23 +593,22 @@ def audio():
     dbox = a.sub(dsub, 300, 400)
     a.c(dry, 0, dbox, 0)
     dOutL, dOutR = (dbox, 0), (dbox, 1)
-    # ---- reverb: an 8-line FDN in its own subpatch, switched off (no CPU) while its mix is 0 and it is not frozen.
+    # ---- reverb: an 8-line FDN in its own subpatch, switched off (no CPU) while its mix is 0.
     # (Tried at half the sample rate: no saving - a Pd object costs about the same per block at any rate, and the
     # reverb is many cheap objects - and the resampling changed the tail)
-    frz = smooth(a, "eng-freeze", 80, 900, 400)
-    ingain = to(a, frz, "*~ -1", 900, 475)
-    ingain = to(a, ingain, "+~ 1", 900, 500)
-    rin = add(a, dry, add(a, dOutL, dOutR, 300, 620), 20, 650)
-    rin = mul(a, rin, ingain, 20, 675)
-    rin = to(a, rin, "*~ 0.5", 20, 700)
+    src = add(a, dry, add(a, dOutL, dOutR, 300, 620), 20, 650)
+    # freeze layers: captured from dry + delay, heard directly and through the reverb
+    fzo = (a.sub(freeze(), 900, 650), 0)
+    a.c(src, 0, fzo[0], 0)
+    rin = to(a, add(a, src, fzo[0], 20, 675), "*~ 0.5", 20, 700)
     rsub = Canvas("reverb", w=1800, h=1700)
-    rsub.comment("8-line FDN; runs only while Reverb mix is up or it is frozen", 20, 5)
+    rsub.comment("8-line FDN; runs only while Reverb mix is up", 20, 5)
     rbox = a.sub(rsub, 20, 750)
     a.c(rin, 0, rbox, 0)
     a_ = a
     a = rsub
     rin = a.obj("inlet~", 20, 700)
-    fx_switch(a, ("eng-rmix", "eng-freeze"), "(engfxrmix > 0.001) || (engfxfreeze > 0.5)", 1600, 30)
+    fx_switch(a, ("eng-rmix",), "engfxrmix > 0.001", 1600, 30)
     # 8-line feedback delay network (after VerbRack): input diffusion -> 8 delays mixed by a Hadamard matrix,
     # each line damped by a low-pass. Size = decay time. Kept light for the Organelle (about half the objects of the
     # first version): 2 diffusers, 2 modulated lines, one damping filter a line, control-rate loop gains that
@@ -482,15 +616,15 @@ def audio():
     LENS = [37.3, 43.1, 49.7, 56.9, 63.7, 71.3, 79.1, 87.7]
     for i, (ms, g) in enumerate(((4.77, 0.6), (12.73, 0.55))):
         rin = allpass(a, 1300, 400 + i * 150, rin, f"$0-rd{i}", ms, g)
-    # loop gains at control rate: T60 = 1.2 .. 15 s from Size; freeze = hold (no loss, no input)
-    gsrc = a.obj("expr engrsize; engfreeze", 1600, 300)
-    for nm, rcv, x in (("engrsize", "eng-rsize", 1600), ("engfreeze", "eng-freeze", 1700)):
+    # loop gains at control rate: T60 = 1.2 .. 15 s from Size
+    gsrc = a.obj("expr engrsize", 1600, 300)
+    for nm, rcv, x in (("engrsize", "eng-rsize", 1600),):
         tv = to(a, a.obj(f"r {rcv}", x, 250), "t b f", x, 275)
         to(a, tv, f"v {nm}", x + 40, 300, outlet=1)
         a.c(tv, 0, gsrc, 0)
     T60 = "(1.2 + engrsize * engrsize * 14)"
     # (x 1.15: with one damping band the lows no longer ring longer; this keeps the tail about as long as before)
-    gx = [f"0.35355 * if(engfreeze > 0.5, 0.9998, exp(-6.9078 * {L} / 1000 / ({T60} * 1.15)))" for L in LENS]
+    gx = [f"0.35355 * exp(-6.9078 * {L} / 1000 / ({T60} * 1.15))" for L in LENS]
     ge = a.obj("expr " + "; ".join(gx), 1600, 330)
     a.c(gsrc, 0, ge, 0)
     a.c(a.obj("loadbang", 1500, 300), 0, gsrc, 0)
@@ -560,7 +694,7 @@ def audio():
     for s_, ap, dout, x in (("L", apL, dOutL, 20), ("R", apR, dOutR, 400)):
         dd = mul(a, dry, dryg, x, 1100)
         rv = mul(a, ap, rmix, x + 100, 1100)
-        m1 = add(a, dd, dout, x, 1125)
+        m1 = add(a, add(a, dd, fzo[0], x + 50, 1112), dout, x, 1125)
         sd = add(a, m1, rv, x, 1150)
         # audio looper: "post" records the finished sound here and plays back after the effects
         to(a, sd, f"s~ eng-tap-post{s_}", x + 200, 1150)

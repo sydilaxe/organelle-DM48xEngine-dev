@@ -19,7 +19,7 @@ def build(out_dir):
     m.comment("Engines are plug-in voice patches in engines/ (see engines/README.txt). Tunings live in tunings/.", 20, 22)
     m.comment("Keys: see README.txt. Aux / footswitch: tap = rec > play > overdub > play ... hold = clear.", 20, 39)
     y = 90
-    for nm, size in ((BEND, NCH), (JUST, 12), ("englheld", NCH * 128), ("engkeyon", NCH * 128), ("englive", 17 * 128), ("englbraw", 17),
+    for nm, size in ((BEND, NCH), (JUST, 12), ("englheld", NCH * 128), ("engkeyon", NCH * 128), ("englive", 17 * 128), ("englbraw", 17),("engfz0", 34075), ("engfz1", 34075), ("engfz2", 34075), ("engfz3", 34075), ("engfz4", 34075), ("engfz5", 34075), ("engfz6", 34075),
                      ("engpbuf", 16), ("engpbuft", 16), ("engpbufh", 16), ("dmxb", MAXBYTES), ("dmxt", MAXEV), ("dmxs", MAXEV), ("dmx1", MAXEV), ("dmx2", MAXEV)):
         m.obj(f"array define {nm} {size}", 700, y)
         y += 22
@@ -36,7 +36,7 @@ def build(out_dir):
         y += 22
     y = 90
     vals = ("engmode engcurve engnr enggr engpage englstate engllen engltop engldub engli englnum englpos "
-            "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engrxmute engrsize engfreeze engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engarpgate engarpvol engarpdens engarpspread engarprat engcombok engtunidx enggn enggv "
+            "englcpos englclay engcount engsel engpv1 engpv2 engpv3 engpv4 engoctb engocts engmout engsending engrxmute engrsize engfreeze engfzk engfzs engfzhold engbeat engheld engmoved englanc englspd englcur englcnt engarpon engarpbr engarpi engarpn engarpdiv engperm engarppat engarpoct engarpgate engarpvol engarpdens engarpspread engarprat engcombok engtunidx enggn enggv "
             "dmxp dmxe dmxr dmxk dmxn dmxc dmxd dmxst dmxi dmxsel dmxcount dmxkey dmxndirs dmxdir dmxk1 engnheld englastp engglide enggwhen enggfrom engvmode engmvel engmkey engmcur engpidx engsP engnow engsbd engsbp engslt engslp").split()
     vals = vals + sec_aloop.VALUES
     for i, nm in enumerate(vals):
