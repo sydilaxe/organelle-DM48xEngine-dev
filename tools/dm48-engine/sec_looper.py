@@ -63,6 +63,17 @@ def looper():
     rrt = chain(lp, lp.obj("r eng-rec", 20, 40), ["t a a"], 20, 65)
     rn = to(lp, rrt, "route 0", 250, 90, outlet=1)
     track_on(lp, rn, "if($f1 < 17, $f1 * 128 + $f2, -1); $f3 > 0", "englivet", 250, 115)
+    # the bend each live channel is at (raw + 1; 0 = never bent), so a new take or overdub starts from it
+    to(lp, to(lp, rrt, "route 1", 600, 90, outlet=1), "expr if($f1 < 17, $f1, -1); $f2 + 1", 600, 115)
+    bwx = len(lp.items) - 1
+    bwm = to(lp, bwx, "moses 0", 600, 140)
+    bwv = lp.obj("f", 700, 165)
+    lp.c(bwx, 1, bwv, 1)
+    bwt = to(lp, bwm, "t b f", 600, 165, outlet=1)
+    bwr = lp.obj("tabwrite englbraw", 600, 215)
+    lp.c(bwt, 1, bwr, 1)                     # index first
+    lp.c(bwt, 0, bwv, 0)                     # then the value
+    lp.c(bwv, 0, bwr, 0)
     rg = to(lp, rrt, "t a b", 20, 100)
     rsp = lp.obj("spigot", 20, 150)
     lp.c(to(lp, rg, "expr (englstate == 1) || (englstate == 3)", 100, 125, outlet=1), 0, rsp, 1)
@@ -78,6 +89,23 @@ def looper():
     lp.c(rst, 0, lpre, 0)
     tins = lp.obj("text insert englp 1e+06", 20, 330)
     lp.c(to(lp, lpre, "list trim", 20, 305), 0, tins, 0)
+
+    # ---- bends at the start of a take / overdub: [s $0-bsnap] layer
+    # A bend sent before recording started (the DM48X sends one only when it changes) would be missing from the
+    # loop, and its notes would play unbent. Each bent live channel gets a bend event at time 0 of the layer.
+    bsl = chain(lp, lp.obj("r $0-bsnap", 750, 230), ["t b b f"], 750, 255)
+    bsc = lp.obj("f", 750, 330)
+    lp.c(msg_to(lp, bsl, "0", 800, 280, outlet=1), 0, bsc, 1)            # reset the counter first
+    lp.c(to(lp, msg_to(lp, bsl, "17", 750, 280, outlet=0), "until", 750, 305), 0, bsc, 0)
+    lp.c(to(lp, bsc, "+ 1", 800, 355), 0, bsc, 1)
+    bsx = lp.obj("expr if((englbraw[$f1] > 0) && (englbraw[$f1] != 8193), $f1, -1); $f2; englbraw[$f1] - 1", 750, 380)
+    lp.c(bsc, 0, bsx, 0)
+    lp.c(bsl, 2, bsx, 1)                                                 # the layer (cold)
+    bsp = lp.obj("pack 0 0 0", 750, 430)
+    lp.c(bsx, 2, bsp, 2)
+    lp.c(bsx, 1, bsp, 1)
+    lp.c(to(lp, bsx, "moses 0", 750, 405), 1, bsp, 0)
+    lp.c(msg_to(lp, bsp, "0 $2 1 $1 $3 0", 750, 455), 0, lp.obj("text insert englp 1e+06", 750, 480), 0)
 
     # ---- close held live notes: [s $0-close] "pos layer"
     clu = chain(lp, lp.obj("r $0-close", 20, 400), ["unpack 0 0"], 20, 425)
@@ -207,6 +235,8 @@ def looper():
     setv(lp, t0, "englanc", 0, 280, 1160, outlet=3)
     setv(lp, t0, "englspd", 1, 330, 1160, outlet=3)
     setv(lp, t0, "englstate", 1, 230, 1210, outlet=2)
+    send_ = msg_to(lp, t0, "1", 400, 1185, outlet=2)
+    to(lp, send_, "s $0-bsnap", 400, 1210)
     to(lp, t0, "s $0-treset", 330, 1210, outlet=1)
     lp.c(t0, 0, stat, 0)
     # REC -> PLAY: length = time so far; held notes get a note-off just before the end
@@ -227,6 +257,7 @@ def looper():
     dxt = chain(lp, t2, ["expr min(engltop + 1, 7)", "t f f"], 780, 1160, outlet=1)
     to(lp, dxt, "v engldub", 840, 1210, outlet=1)
     to(lp, dxt, "v engltop", 780, 1210)
+    to(lp, to(lp, t2, "expr engldub", 700, 1185), "s $0-bsnap", 700, 1210)
     t2b = to(lp, t2, "t b b", 900, 1160)
     setv(lp, t2b, "englstate", 3, 960, 1185, outlet=1)
     lp.c(t2b, 0, stat, 0)

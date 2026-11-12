@@ -113,6 +113,14 @@ x = audio(P).mean(1)
 check("MIDI looper clear silences held loop notes", rms(x, 0.9, 1.2) > 0.02 and rms(x, 4.0, 4.5) < 0.002,
       f"rms at 4 s {rms(x, 4.0, 4.5):.4f}")
 
+# 3c. a bend sent before the MIDI loop was recorded is part of the loop (the loop plays at the live pitch)
+ev = [(300, "eng-in 1 3 8400 0"), (500, "aux 1"), (550, "aux 0"), (600, "eng-in 0 3 57 100"), (601, "eng-in 4 3 11 100"),
+      (1100, "eng-in 0 3 57 0"), (2000, "aux 1"), (2050, "aux 0"), (4500, "knob2 0.5")]
+run(P, ev)
+x = audio(P).mean(1)
+live_, loop_ = f0(x[int(0.8 * SR):int(1.0 * SR)], lo=100, hi=500), f0(x[int(3.8 * SR):int(4.0 * SR)], lo=100, hi=500)
+check("MIDI loop keeps a bend sent before recording", abs(cents(loop_, live_)) < 10, f"live {live_:.1f} Hz loop {loop_:.1f} Hz")
+
 # 4. switching engines while playing: a short fade (no gap, no click), held notes keep sounding
 ev = [(300, "eng-in 0 2 57 100"), (301, "eng-in 4 2 11 100"), (500, "notesRaw 69 100"), (550, "notesRaw 69 0"),
       (600, "knob1 0.79")]
@@ -211,6 +219,14 @@ p0, p5 = np.mean(lv0[0:4]), np.mean(lv0[20:24])        # whole 1 s passes, 5 s a
 check("audio loop decay off keeps the level", abs(p5 / p0 - 1) < 0.05, f"{p0:.3f} -> {p5:.3f}")
 check("audio loop decay fades smoothly to silence", lv1[-1] < 0.001 and min(steps) > 0.4,
       f"end {lv1[-1]:.4f}, steepest 0.25 s step x{min(steps):.2f}")
+
+from t_adubdecay import adubdecay_test
+e_ = adubdecay_test(P)
+check("audio loop decay continues while overdubbing", all(0.3 < b / a < 0.5 for a, b in zip(e_, e_[1:])),
+      " ".join(f"{b / a:.2f}" for a, b in zip(e_, e_[1:])))
+from t_areuse import areuse_test
+old_, new_ = areuse_test(P)
+check("an overdub after a clear never plays the old loop", old_ > 0.02 and new_ < 0.001, f"{new_:.4f}")
 
 # 10. audio loop pitch is continuous (+3.5 semitones)
 from t_apitch import apitch_test

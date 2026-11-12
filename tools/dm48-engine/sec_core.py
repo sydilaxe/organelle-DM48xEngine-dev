@@ -274,8 +274,8 @@ def combos():
     alv = chain(cb, lkr, ["t f f"], 450, 625, outlet=2)
     to(cb, alv, "s eng-aloop-level", 550, 650, outlet=1)
     to(cb, msg_to(cb, to(cb, alv, "expr int($f1 * 100)", 450, 650), "list Audio level $1", 450, 675), "s $0-toast", 450, 700)
-    # loop decay: left = off, then each pass keeps 99.6 % (very slow) .. 30 % (quick) of the older layers' level
-    afd = chain(cb, lkr, ["expr if($f1 < 0.03, 1, 1 - 0.7 * pow($f1, 1.5))", "t f f"], 650, 625, outlet=3)
+    # loop decay: left = off, then each pass keeps 95 % (slow) .. 40 % (quick) of the loop's level
+    afd = chain(cb, lkr, ["expr if($f1 < 0.03, 1, 1 - 0.6 * pow($f1, 0.7))", "t f f"], 650, 625, outlet=3)
     to(cb, afd, "s eng-aloop-fade", 750, 675, outlet=1)
     afs = chain(cb, afd, ["expr if($f1 >= 1, 0, max(1, int((1 - $f1) * 100 + 0.5)))", "sel 0"], 650, 675)
     to(cb, msg_to(cb, afs, "list Loop decay off", 650, 725), "s $0-toast", 650, 750)
