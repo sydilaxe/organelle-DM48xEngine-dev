@@ -100,11 +100,7 @@ def looper():
     # ---- note-offs for sounding loop notes: [s $0-loopoff] "firstch lastch"
     # visit the loop notes that are on (englheldt), last line first: a note-off deletes its own line
     lox = chain(lp, lp.obj("r $0-loopoff", 450, 400), ["expr $f1 * 128; ($f2 + 1) * 128"], 450, 425)
-    lohi = lp.obj("f", 600, 475)
-    lp.c(lox, 1, lohi, 1)
     lot = to(lp, lox, "t b f", 450, 450)
-    lolo = lp.obj("f", 550, 475)
-    lp.c(lot, 1, lolo, 1)
     loc = lp.obj("f", 450, 525)
     lsz = chain(lp, lot, ["text size englheldt", "t f f"], 450, 475)
     lp.c(lsz, 1, loc, 1)
@@ -113,10 +109,11 @@ def looper():
     lp.c(ldn, 0, loc, 1)
     lkey = chain(lp, ldn, ["text get englheldt 0 1", "t f f"], 450, 575)
     lsp = lp.obj("spigot", 450, 600)
+    # the range goes straight into the expr's cold inlets (an [f] in between would never send it on)
     lin = lp.obj("expr ($f1 >= $f2) && ($f1 < $f3)", 520, 600)
     lp.c(lkey, 1, lin, 0)
-    lp.c(lolo, 0, lin, 1)
-    lp.c(lohi, 0, lin, 2)
+    lp.c(lot, 1, lin, 1)
+    lp.c(lox, 1, lin, 2)
     lp.c(lin, 0, lsp, 1)
     lp.c(lkey, 0, lsp, 0)
     lom = lsp

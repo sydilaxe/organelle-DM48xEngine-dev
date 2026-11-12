@@ -3,7 +3,7 @@
 Keys (high octave):  A tap = record > play > overdub > play ...   A held 1 s = clear
                      A# = undo (removes the newest layer)          B = stop / start
 Hold A + knob:  1 speed & direction (tape style: centre normal, left reverse)  2 pitch -12..+12 (speed unchanged)
-                3 loop level  4 layer fade (older layers fade a little each pass)
+                3 loop level  4 loop decay (left = off; turning right, older layers fade faster)
 Hold B + knob:  Pre (records the synth before the effects; the loop then plays through delay/reverb) / Post
 If a MIDI loop is playing, recording waits for the MIDI loop start and lasts exactly one MIDI cycle.
 
@@ -313,7 +313,9 @@ def control():
     to(a, tk, "s $0-asnap", 20, 610, outlet=3)
     wsel = chain(a, tk, ["expr (engastate == 4) || engatail", "sel 1"], 150, 610, outlet=2)
     to(a, wsel, "s $0-aseam", 150, 660)
-    # fade: every on layer except the one being written loses (1 - fade)
+    # decay (like a tape looper's feedback): every on layer except the one being written is multiplied by engafb
+    # each pass. The gain glides there over the whole pass, so the loop fades smoothly instead of stepping at the
+    # seam. Below -60 dB a layer is gone: gain 0 (its DSP switches off) and its slot is free for a new overdub.
     fg = chain(a, tk, ["expr engafb < 0.999", "sel 1"], 350, 610, outlet=1)
     fu = to(a, msg_to(a, fg, str(NL), 350, 660), "until", 350, 685)
     fz = msg_to(a, fg, "0", 450, 660)
@@ -322,11 +324,20 @@ def control():
     a.c(fu, 0, fcn, 0)
     a.c(to(a, fcn, "+ 1", 400, 735), 0, fcn, 1)
     fx = to(a, fcn, "expr if(engaon[$f1] && !(($f1 == engaw) && ((engastate == 4) || engatail)), $f1, -1); "
-                    "engag[$f1] * engafb", 350, 760)
-    fpk = a.obj("pack 0 0", 350, 810)
+                    "if(engag[$f1] * engafb < 0.001, 0, engag[$f1] * engafb); "
+                    "max(60, engalenms / max(0.05, abs(engaspd)))", 350, 760)
+    fpk = a.obj("pack 0 0 0", 350, 810)
+    a.c(fx, 2, fpk, 2)
     a.c(fx, 1, fpk, 1)
     a.c(to(a, fx, "moses 0", 350, 785), 1, fpk, 0)
-    send(a, fpk, "$2 $1", "$0-asetgain", 350, 835)
+    to(a, fpk, "s $0-adecay", 350, 835)
+    # [s $0-adecay] "layer gain ms"
+    dg = chain(a, a.obj("r $0-adecay", 20, 870), ["t a a a"], 20, 895)
+    tabset(a, dg, "$f1; $f2 + 0 * $f3", "engag", 250, 920, outlet=2)
+    tabset(a, dg, "$f1; ($f2 > 0) + 0 * $f3", "engaon", 400, 920, outlet=1)
+    drt = to(a, dg, "route " + " ".join(str(j) for j in range(NL)), 20, 920)
+    for j in range(NL):
+        to(a, drt, f"s $0-ag{j}", 20 + j * 40, 945, outlet=j)
     to(a, tk, "s $0-anext", 600, 610, outlet=0)
     # seam: copy what the writer wrote past the end (layer length lw, x samples) to the start, then write on from x
     sm = chain(a, a.obj("r $0-aseam", 1000, 560), ["expr int(engaph * engawA + engawB + 1); int(abs(engawA))"], 1000, 585)
