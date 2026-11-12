@@ -16,6 +16,6 @@ ev.append((2200, "notesRaw 72 100")); ev.append((2250, "knob2 0.8")); ev.append(
 key(2500, 61)           # LIBRARY
 key(2800, 60)           # PLAY
 ev.append((3000, "knob1 0.2"))  # plain knob: PLAY param
-log = run(P, ev, extra_prints=["eng-page","eng-freeze","eng-octshift","eng-dtime-ms","eng-rsize","eng-p1","eng-bamt"])
+log = run(P, ev, extra_prints=["eng-page","eng-frz-tap","eng-frz-off","eng-octshift","eng-dtime-ms","eng-rsize","eng-p1","eng-bamt"])
 for l in log.splitlines():
     if not l.startswith(("screenLine2","screenLine3","screenLine4","led","midiOutGate")): print(l)

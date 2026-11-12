@@ -12,7 +12,7 @@ SETUP
 KEYS  (the Organelle keyboard is a control surface; play the DM48X)
  Low octave:  C PLAY  C# LIBRARY  D SHAPE  D# panic  E FX  F SETUP  F# VOICE  G TUNE  G# ARP (again: ARP-BR)  A ENGINE
               A# loop undo   B loop stop/start
- High octave: C freeze  C# delay throw (hold)  D octave down  D# octave up  E wet only
+ High octave: C freeze (tap = add a layer, up to 6; hold = off)  C# delay throw (hold)  D octave down  D# octave up  E wet only
               F tap tempo  F# arpeggiator  G arp permutations
               G# screen view (pages > scope > loop waveform)
               A audio loop rec/play/dub (hold 1 s = clear)  A# audio undo  B audio stop/start
@@ -71,5 +71,8 @@ While a tuning is sent, MIDI from the DM48X is ignored (until 0.6 s after), so i
 Saving: automatic, 2 s after a change (settings.txt + engines.txt in the patch folder). System > Save Patch also works.
 Knobs: smooth settings pick up from their current value (no jumps when you change page).
 Sending a tuning whose name ends in a key (e.g. 'Richter Low D') also sets the TUNE Key.
-Reverb: 8-line feedback delay network (after VerbRack), freeze, size = decay time.
+Reverb: 8-line feedback delay network (after VerbRack), size = decay time.
+Freeze: each tap captures 0.75 s of the sound (dry + delay) and holds it as an endless granular layer
+(two 250 ms grains from random places, Hann windows). Up to 6 layers; the 7th fades out the oldest.
+The layers go to the output and into the reverb. They cost nothing while no layer plays.
 """

@@ -228,6 +228,17 @@ from t_areuse import areuse_test
 old_, new_ = areuse_test(P)
 check("an overdub after a clear never plays the old loop", old_ > 0.02 and new_ < 0.001, f"{new_:.4f}")
 
+# 9c. freeze (high C): taps stack layers that hold after the notes end, the 7th fades the 1st, hold = all off
+from t_freeze import freeze_test, band as fband
+x, log, th = freeze_test(P, 2)
+held = fband(x, 3.4, 4.2, 110.0) > 20 and fband(x, 3.4, 4.2, 164.8) > 20      # A2 and E3 (DM48 plays them an octave down)
+check("freeze holds two stacked layers", held and not errors(log),
+      f"A {fband(x, 3.4, 4.2, 110.0):.0f} E {fband(x, 3.4, 4.2, 164.8):.0f}")
+check("freeze long hold fades everything out", rms(x, th + 3.0, th + 3.5) < 0.001, f"{rms(x, th + 3.0, th + 3.5):.4f}")
+x, log, th = freeze_test(P, 7)
+check("7th freeze fades out the 1st layer", fband(x, 9.6, 10.4, 110.0) < 5 and fband(x, 9.6, 10.4, 164.8) > 20,
+      f"first {fband(x, 9.6, 10.4, 110.0):.0f} second {fband(x, 9.6, 10.4, 164.8):.0f}")
+
 # 10. audio loop pitch is continuous (+3.5 semitones)
 from t_apitch import apitch_test
 sh_ = apitch_test(P)
