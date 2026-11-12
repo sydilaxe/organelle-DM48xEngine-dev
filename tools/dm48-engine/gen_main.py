@@ -19,7 +19,7 @@ def build(out_dir):
     m.comment("Engines are plug-in voice patches in engines/ (see engines/README.txt). Tunings live in tunings/.", 20, 22)
     m.comment("Keys: see README.txt. Aux / footswitch: tap = rec > play > overdub > play ... hold = clear.", 20, 39)
     y = 90
-    for nm, size in ((BEND, NCH), (JUST, 12), ("englheld", NCH * 128), ("engkeyon", NCH * 128), ("englive", 17 * 128),
+    for nm, size in ((BEND, NCH), (JUST, 12), ("englheld", NCH * 128), ("engkeyon", NCH * 128), ("englive", 17 * 128), ("englbraw", 17),
                      ("engpbuf", 16), ("engpbuft", 16), ("engpbufh", 16), ("dmxb", MAXBYTES), ("dmxt", MAXEV), ("dmxs", MAXEV), ("dmx1", MAXEV), ("dmx2", MAXEV)):
         m.obj(f"array define {nm} {size}", 700, y)
         y += 22

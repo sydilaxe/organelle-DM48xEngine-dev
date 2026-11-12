@@ -78,12 +78,14 @@ This is the working memory for this project: read it first in any new session.
   - A pitch message with ms 0 means a new note.
   - Knobs are shared as `[r~ eng-p1~..p4~]`.
 - **MPE:**
+  - The MIDI looper keeps each live channel's last bend (`englbraw`) and writes it at time 0 of every new take or overdub layer, so a bend sent before recording is not lost.
   - Internal channel = 17·layer + MIDI ch.
   - Each voice is keyed by ch·128 + note.
   - Per-voice just intonation reads `engjust[(note-key+120)%12]`.
 - **Audio looper** (`sec_aloop.py`):
   - **Layers:** 6 stereo layers, `engaL0..5` / `engaR0..5`, 45 s each (about 95 MB, allocated at load).
   - **Playback:** one `phasor~` playhead reads every layer, and each layer has its own gain (`engag`, used for undo and fade).
+  - **Decay:** each pass the other layers' gains are multiplied by `engafb`, gliding over the whole pass; the layer being written decays at the write head (k = `engafb` from its second pass). An overdub layer is silent during its first pass, because the playhead would otherwise read what the slot held before (an older loop) ahead of the writer.
   - **Speed per layer:** each layer stores its own mapping, read index = phase × A + B. A is ±(samples per pass at the recording speed) and B is 0 or the length. Overdubs at any speed or direction therefore follow later speed changes like tape (`$0-alayset j A B`). Layers stopped before a full pass are marked `engadirty` and zeroed when reused.
   - **Writing:** one writer (`tabwrite~` with `set` / `start N`) writes the newest layer as input×gate plus existing×k. k is 0 for the first pass and 1 after that. A layer always gets at least one full pass, so a reused layer never contains old audio.
   - **Wraps:** the playhead phasor runs freely and is reset only when playback (re)starts.

@@ -314,7 +314,7 @@ def control():
     wsel = chain(a, tk, ["expr (engastate == 4) || engatail", "sel 1"], 150, 610, outlet=2)
     to(a, wsel, "s $0-aseam", 150, 660)
     # decay (like a tape looper's feedback): every on layer except the one being written is multiplied by engafb
-    # each pass. The gain glides there over the whole pass, so the loop fades smoothly instead of stepping at the
+    # each pass (the one being written decays at the write head, see k). The gain glides there over the whole pass, so the loop fades smoothly instead of stepping at the
     # seam. Below -60 dB a layer is gone: gain 0 (its DSP switches off) and its slot is free for a new overdub.
     fg = chain(a, tk, ["expr engafb < 0.999", "sel 1"], 350, 610, outlet=1)
     fu = to(a, msg_to(a, fg, str(NL), 350, 660), "until", 350, 685)
@@ -376,9 +376,15 @@ def control():
     a.c(to(a, wb, "expr engalenms / max(0.05, abs(engaspd)) - 3", 1300, 525), 0, p1, 0)
     a.c(msg_to(a, a.obj("r $0-awcancel", 1400, 525), "stop", 1400, 550), 0, p1, 0)
     # first pass complete: from now on the layer adds to itself; a finishing tail ends here
+    # The layer stays silent during its first pass: until the writer has been all the way round, what the
+    # playhead reads there is whatever the slot held before (an older loop, an undone or faded layer).
+    # From the second pass the old part is multiplied by the decay (k = engafb), like a tape looper's feedback.
     p1t = to(a, p1, "t b b b", 1300, 575)
     setv(a, p1t, "engak", 1, 1400, 600, outlet=2)
-    send(a, p1t, "1", "$0-aksig", 1450, 600, outlet=1)
+    to(a, to(a, p1t, "expr engafb", 1450, 600, outlet=1), "s $0-aksig", 1450, 625)
+    gon = to(a, p1t, "delay 3", 1550, 625, outlet=1)          # just after the wrap
+    a.c(msg_to(a, a.obj("r $0-awcancel", 1650, 600), "stop", 1650, 625), 0, gon, 0)
+    send(a, to(a, gon, "expr engaw", 1550, 650), "$1 1 2", "$0-adecay", 1550, 675)
     to(a, chain(a, p1t, ["expr engatail", "sel 1"], 1300, 600), "s $0-awend", 1300, 650)
     # stop writing: [s $0-awend]
     we0 = chain(a, a.obj("r $0-awend", 1700, 425), ["t b b"], 1700, 440)
@@ -597,6 +603,7 @@ def control():
     a.c(msg_to(a, ok, "list Audio: 6 layers used - undo or clear", 450, 2525, outlet=1), 0, toast, 0)
     ng = to(a, ok, "t b b b b", 300, 2525)
     to(a, ng, "s $0-ause", 300, 2550, outlet=3)
+    send(a, to(a, ng, "expr engaw", 250, 2575, outlet=2), "0 $1", "$0-asetgain", 250, 2600)   # silent first pass
     send(a, ng, "1", "$0-agatesig", 400, 2550, outlet=2)
     to(a, ng, "s $0-awbegin", 500, 2550, outlet=2)
     setv(a, ng, "engastate", 4, 600, 2550, outlet=1)
@@ -692,7 +699,11 @@ def control():
     lv = chain(a, a.obj("r eng-aloop-level", 1300, 3200), ["t f b"], 1300, 3225)
     to(a, lv, "v engalvl", 1400, 3250, outlet=0)
     a.c(lv, 1, stat, 0)
-    to(a, a.obj("r eng-aloop-fade", 1500, 3200), "v engafb", 1500, 3225)
+    fdt = chain(a, a.obj("r eng-aloop-fade", 1500, 3200), ["t b f"], 1500, 3225)
+    to(a, fdt, "v engafb", 1550, 3250, outlet=1)
+    # the layer being written decays at the write head (only after its first pass)
+    to(a, to(a, chain(a, fdt, ["expr if(engak, engafb, -1)", "moses 0"], 1500, 3250), "t f", 1500, 3300, outlet=1),
+       "s $0-aksig", 1500, 3325)
     pp = chain(a, a.obj("r eng-aloop-post", 1650, 3200), ["t f f"], 1650, 3225)
     to(a, pp, "v engapost", 1750, 3250, outlet=1)
     to(a, pp, "s eng-apost", 1650, 3250)
