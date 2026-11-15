@@ -1,0 +1,126 @@
+# Build, test and release DM48 Engine: rebuild the patch and manual from source, test them in Pure Data,
+# package the zip. Every push and pull request runs it; a release also publishes the zip and the manual.
+name: build
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a GitHub release with this tag (e.g. v2.3). Leave empty to just build."
+        required: false
+        default: ""
+
+# the release tag, when this run publishes one: a pushed v* (or V*) tag, a release created on the
+# website, or a manual run with release_tag filled in (with or without the v)
+env:
+  RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name || ((startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/V')) && github.ref_name) || '' }}
+
+jobs:
+  organelle:
+    name: Organelle patch (build and test in Pure Data)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The README shows the source's version
+        run: |
+          # README's "Latest release" line and VERSION move together
+          v=$(cat VERSION)
+          grep -qF "**Latest release:** [v$v](../../releases/tag/v$v)" README.md ||
+            { echo "::error::README.md's Latest release line isn't v$v, the version in VERSION"; exit 1; }
+
+      - name: Install Pure Data and Python packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends puredata-core python3-numpy zip
+          pd -version
+
+      - name: Build DM48 Engine and its manual
+        working-directory: tools/dm48-engine
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: |
+          set -o pipefail
+          ./build.sh 2>&1 | tee build.log || { tail -n 25 build.log | sed 's/^/::error::/'; exit 1; }
+
+      - name: Committed patch matches its source
+        run: |
+          if ! git diff --quiet -- patches/; then
+            git status --short -- patches/
+            echo "::error::patches/ is out of date - run tools/dm48-engine/build.sh and commit the result"
+            exit 1
+          fi
+
+      - name: Test in Pure Data
+        working-directory: tools/dm48-engine
+        run: |
+          set -o pipefail
+          python3 gen_all.py "../DM48 Engine"
+          ./tload.sh "../DM48 Engine"
+          python3 ci_check.py "../DM48 Engine" 2>&1 | tee check.log || { grep -E "FAIL|Error|error|Traceback" check.log | tail -n 25 | sed 's/^/::error::/'; exit 1; }
+
+      - name: Package
+        run: |
+          # a release is packaged as the tag's version (a tag typed as V2.3, 2.3 or with spaces
+          # around it is taken as v2.3); otherwise the version in VERSION
+          if [ -n "$RELEASE_TAG" ]; then
+            v=$(printf '%s' "$RELEASE_TAG" | tr -d '[:space:]'); v=${v#[vV]}
+            echo "$v" | grep -Eqx '[0-9]+(\.[0-9]+)*' || { echo "::error::release tag $RELEASE_TAG isn't v<number>.<number>..."; exit 1; }
+          else
+            v=$(cat VERSION)
+          fi
+          echo "packaging version v$v"
+          tools/package.sh "v$v"
+          test "$(unzip -p "dist/DM48_Engine-v$v.zip" "DM48 Engine/VERSION.txt")" = "DM48 Engine v$v"
+          test -s "dist/DM48_Engine_Manual-v$v.pdf"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DM48_Engine
+          path: dist/
+
+  release:
+    name: Publish release
+    # runs for: a pushed v* (or V*) tag, a release created on the website, or a manual run with a tag filled in
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/V') || github.event_name == 'release' || inputs.release_tag != ''
+    needs: [organelle]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: DM48_Engine
+          path: dist
+      - name: Check the zip is the tag's version
+        run: |
+          # a manual run's tag may leave out the v, or be typed V2.3
+          v=$(printf '%s' "$RELEASE_TAG" | tr -d '[:space:]'); v=${v#[vV]}
+          TAG=v$v
+          # a release made on the website keeps its own tag; the files go onto it
+          if [ "$GITHUB_EVENT_NAME" = release ]; then TAG=$RELEASE_TAG; fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          test -f "dist/DM48_Engine-v$v.zip" && test -f "dist/DM48_Engine_Manual-v$v.pdf" ||
+            { ls dist; echo "::error::dist/ doesn't hold version v$v"; exit 1; }
+      - name: Create the GitHub release with the patch and the manual
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            # the notes: .github/release-notes.md, then GitHub's list of the pull requests since the last release
+            gh release create "$TAG" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "DM48 Engine $TAG" \
+              --notes-file .github/release-notes.md \
+              --generate-notes \
+              --latest
+          fi

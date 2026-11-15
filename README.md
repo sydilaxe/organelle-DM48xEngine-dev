@@ -3,7 +3,7 @@
 Pure Data patches for the **Critter & Guitari Organelle M** (Raspberry Pi CM3, Organelle OS 5, Pd 0.53),
 built for the **Lekholm DM48X** MIDI harmonica (MPE + breath).
 
-**Latest release:** [v1.6](../../releases/tag/v1.6) · [all releases](../../releases)
+**Latest release:** [v2.2](../../releases/tag/v2.2) · [all releases](../../releases)
 
 ## Patches (`patches/`)
 
@@ -27,25 +27,30 @@ Requirements for building and testing: Python 3, numpy, Pure Data 0.53+ (`pd -ba
 
 ## Releases
 
-Ready-to-install zips are on the **Releases** page. They are built by `.github/workflows/release.yml`.
+Ready-to-install zips are on the **Releases** page. They are built by `.github/workflows/build.yml`, which
+also runs on every push and pull request.
 
-To make a release:
+To make a release, set the new version in `VERSION` and in the README's **Latest release** line (CI checks
+the two match), put what is new at the top of `.github/release-notes.md`, then push a tag:
 
 ```
-git tag v1.0
-git push origin v1.0
+git tag v2.3
+git push origin v2.3
 ```
 
-The workflow then:
+Running **Actions › build › Run workflow** with `release_tag` filled in, or creating a release on GitHub's
+Releases page, does the same. The workflow then:
 
 1. Rebuilds DM48 Engine and its manual from `tools/`.
 2. Fails if the committed `patches/` folder doesn't match the source.
 3. Runs `ci_check.py`, which plays the patch offline in Pure Data and checks engines, engine switching, both loopers, undo and the tuning library.
-4. Publishes the zips and the manual as a GitHub Release.
+4. Publishes the zip and the manual as a full GitHub Release marked **Latest**. Its notes are
+   `.github/release-notes.md`, followed by GitHub's list of the pull requests merged since the last release.
 
-You can also run it by hand from **Actions › Release build › Run workflow**. That gives the zips as a download, without making a release. Tick **publish** (with a version such as `v1.2`) to create the tag and the release from that run instead. A release drafted on GitHub's Releases page works too: its new tag runs the workflow, which attaches the zips.
+A tag typed as `V2.3` or `2.3` is published as `v2.3`; running again for the same tag replaces the files.
+Without a tag, the run keeps the zip as a workflow artifact.
 
-To build locally: `tools/dm48-engine/build.sh`, then `tools/package.sh v1.0`. The zips go to `dist/`.
+To build locally: `tools/dm48-engine/build.sh`, then `tools/package.sh v2.3`. The zip goes to `dist/`.
 
 ## Notes
 
